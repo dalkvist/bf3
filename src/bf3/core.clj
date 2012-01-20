@@ -32,9 +32,10 @@
                                  (unordered-list ["classes"
                                                   "prefere weapons/classes without 1/5 service star(s)"
                                                   "prefere weapons with unlocked attachments"
-                                                  "add update call to bf3stats"
-                                                  "vehicle loadouts"
-                                                  "squad loadouts"])])]
+                                                  "PWDs"])
+                                 
+                                 "add update call to bf3stats"
+                                 "squad loadouts"])]
                [:div#fotter 
                  [:p "data from bf3stats.com"]]]))
 
