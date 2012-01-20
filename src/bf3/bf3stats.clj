@@ -1,6 +1,8 @@
 (ns bf3.bf3stats
   (:require [clj-http.client :as client]
-            [clojure.string :as s])
+            [clojure.string :as s]
+            [clojure.core.cache :as cache]
+            [clojure.core.memoize :as mem])
   (:use [cheshire.core]))
 
 (declare *test-player-info* *test-weapond*)
@@ -14,11 +16,16 @@
 (def ^{:dynamic true} *only-main?* true)
 (def ^{:dynamic true} *only-weapons?* true)
 
-(defn- get-player-info [player]
+(def ^{:dynamic true} *player-cache-time* (* 2 60 1000))
+
+
+(defn- player-info [player]
   "get the player info from bf3stats.com"
   (-> (client/get (str  player-url "/?player=" player "&opt=" ""))
                     :body
                     (parse-string true)))
+
+(def get-player-info (mem/memo-ttl player-info *player-cache-time*))
 
 (defn- get-class [class kits]
   "returns the class from kits"
