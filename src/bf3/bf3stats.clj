@@ -161,7 +161,8 @@
 
 (defn random-loadout
   ([] (binding [*only-avalible?* false] (random-loadout *test-player-info*)))
-  ([player] (let [class (->> player classes shuffle first val :name)
+  ([player] (let [player (if (string? player) (get-player-info player) player)
+                  class (->> player classes shuffle first val :name)
                   weapon (->> (class-weapons player class) shuffle first)
                   attachments (->> (random-attachments weapon) (map :name))]
               (hash-map :class class

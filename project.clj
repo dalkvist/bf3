@@ -5,6 +5,7 @@
                  [clj-http "0.2.7"]
                  [noir "1.2.2"]
                  [congomongo "0.1.7"]
+                 [org.clojure/core.cache "0.5.0"]
                  [clj-stacktrace "0.2.4"]]
   :main bf3.server 
   :jvm-opts ["-Xms350m" "-Xmx350m" "-server" "-XX:+UseConcMarkSweepGC"
