@@ -48,7 +48,7 @@
       public-routes)
 
 
-(defn server []
+(defn -main [& m]
   (let [port (Integer/parseInt (get (System/getenv) "PORT" "8081"))]
     (doto (Thread. #(run-jetty #'my-app {:port port})) .start)))
 

@@ -8,7 +8,7 @@
                  [org.clojure/core.memoize "0.5.1"]
                  [org.clojure/core.cache "0.5.0"]
                  [clj-stacktrace "0.2.4"]]
-  :main bf3.server 
+  :main bf3.core  
   :jvm-opts ["-Xms350m" "-Xmx350m" "-server" "-XX:+UseConcMarkSweepGC"
              "-XX:+CMSIncrementalMode" "-XX:+UseCompressedOops"
              "-XX:+DoEscapeAnalysis" "-XX:+UseBiasedLocking"
