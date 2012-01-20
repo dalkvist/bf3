@@ -13,6 +13,7 @@
 (def ^{:dynamic true} *only-weapons?* true)
 
 (defn- get-player-info [player]
+  "get the player info from bf3stats.com"
   (-> (client/get (str  player-url "/?player=" player "&opt=" ""))
                     :body
                     (parse-string true)))
@@ -21,10 +22,10 @@
                 (get-player-info "cairdazar"))
 
 (def ^{:dynamic true} *test-weapond*
-  (->> *test-player-info*
-       :stats :weapons :caSG553))
+  (->> (class-weapons *test-player-info* "assault") first))
 
 (defn- get-class [class kits]
+  "returns the class from kits"
   (get kits (keyword (s/lower-case class))))
 
 (defn classes [player]
@@ -33,7 +34,7 @@
        (filter #(= "kit" (:type (val %))))))
 
 (defn- available-weapon-names [player class]
-  "returns the unlocked weapon names for the kit of player"
+  "returns the unlocked weapon names for the class of player"
   (->> player
        :stats :kits (get-class class)
        :unlocks
@@ -41,21 +42,20 @@
                      (or (not (:curr %))
                          (>= (:curr %) (:needed % )))))))
 
-(defn kit-weapons
-  "returns the weapons of the kit for the player, only the unlocked ones if *only-avalible?*."
-  ([player kit]
-      (->> player
-           :stats :weapons
-           (filter #(and (if *only-avalible?*
-                           (some (fn [w] (= (key %) (keyword (:id w))))
-                                 (available-weapon-names player kit))
-                           true)
-                         (= (s/lower-case kit) (-> % val :kit s/lower-case))
-                         (not-any? (set (->> % val :category keyword list))
-                                   (map keyword (concat (if *only-weapons?*
-                                                          ["Underslungs" "AT Launchers" "AA Launchers"]
-                                                          [] )
-                                                        (if *only-main?* ["Pistols"] [])))))))))
+(defn class-weapons
+  "returns the weapons of the class for the player, only the unlocked ones if *only-avalible?*."
+  ([player class]
+     (let [exclude (concat (if *only-weapons?* ["Underslungs" "AT Launchers" "AA Launchers"] [])
+                           (if *only-main?*["Pistols"] []))]
+       (->> player
+            :stats :weapons
+            (filter #(and (if *only-avalible?*
+                            (some (fn [w] (= (key %) (keyword (:id w))))
+                                  (available-weapon-names player class))
+                            true)
+                          (= (s/lower-case class) (-> % val :kit s/lower-case))
+                          (not-any? (set (->> % val :category s/lower-case list))
+                                    (map s/lower-case exclude))))))))
 
 (defn- attachment-slot [attachment]
   "return the attachment with the equitment slot it belongs to"
@@ -83,13 +83,14 @@
            (map attachment-slot))))
 
 (defn- random-attachments [weapon]
+  "returns a random attachment for each attachment slot"
   (->> weapon attachments (sort-by :slot) (partition-by :slot)
        (map #(->> % shuffle first))))
 
 (defn pistols
     "returns the pistols for the player, only the unlocked ones if *only-avalible?*."
   ([player]
-      (->> (kit-weapons player "general" false)
+      (->> (binding [*only-main?* false] (class-weapons player "general"))
            (filter #(and (if *only-avalible?*
                            (some (fn [w] (= (key %) (keyword (:id w))))
                                  (available-weapon-names player "general"))
@@ -98,6 +99,7 @@
                             (-> % val :category  s/lower-case)))))))
 
 (defn- default-equipment [class]
+  "returns the additional equitment for the class (starting equitment and mislabeled weapons)"
   (let [player *test-player-info*
         weapons (fn [cats]
                   (->> player :stats :weapons
@@ -108,17 +110,18 @@
                                      (some (set (->> % val :category keyword list))
                                            (map keyword cats))))
                         (map  val)))]
-    (case (keyword class)
-      :assault (concat (weapons ["Underslungs"])
+    (case (s/lower-case class)
+      "assault" (concat (weapons ["Underslungs"])
                        [{:type "kititem" :name "Medic kit" :id "medkit"}])
-      :engineer (concat (weapons ["AT Launchers" "AA Launchers"])
+      "engineer" (concat (weapons ["AT Launchers" "AA Launchers"])
                         [{:type "kititem" :name "RPG-7V2" :id "rpg"}
                          {:type "kititem" :name "SMAW" :id "smaw"}
                          {:type "kititem" :name "Repair Tool" :id "repair"}])
-      :support [{:type "kititem" :name "Ammo Box" :id "ammobox"}]
-      :recon [{:type "kititem" :name "Radio Beacon" :id "beacon"}])))
+      "support" [{:type "kititem" :name "Ammo Box" :id "ammobox"}]
+      "recon" [{:type "kititem" :name "Radio Beacon" :id "beacon"}])))
 
 (defn- equipment-slot [equipment]
+  "adds information on equipments slot"
   (conj equipment
         {:slot
          (case (:name equipment)
@@ -140,20 +143,18 @@
             (concat (default-equipment class))
             (map equipment-slot)))))
 
+(defn- random-equipment [player class]
+  "returns a random equipment for each equipment slot"
+  (->> (equipment player class) (sort-by :slot) (partition-by :slot)
+       (map #(->> % shuffle first))))
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+(defn random-loadout
+  ([] (binding [*only-avalible?* false] (random-loadout *test-player-info*)))
+  ([player] (let [class (->> player classes shuffle first val :name)
+                  weapon (->> (class-weapons player class) shuffle first)
+                  attachments (->> (random-attachments weapon) (map :name))]
+              (hash-map :class class
+                        :weapon {:name (->> weapon val :name)
+                                 :attachments attachments}
+                        :sidearm (->> (pistols player) shuffle first val :name)
+                        :equipment (->> (random-equipment player class) (map :name))))))
