@@ -148,6 +148,21 @@
   (->> (equipment player class) (sort-by :slot) (partition-by :slot)
        (map #(->> % shuffle first))))
 
+(defn specializations [player]
+  "returns the specializations for the player, only the unlocked ones if *only-avalible?*."
+  (->> player :stats :specializations
+       (filter #(if *only-avalible?*
+                  (or (not (:needed (val %)))
+                      (>= (:curr (val %)) (:needed (val %))))
+                  true))
+       ((fn [list] (filter #(if (= "2" (->> % key str last str))
+                             true
+                             (if (some (fn [k] (= (->> k key s/lower-case butlast (reduce str))
+                                                 (->> % key s/lower-case)))
+                                       list)
+                               false true))
+                          list)))))
+
 (defn random-loadout
   ([] (binding [*only-avalible?* false] (random-loadout *test-player-info*)))
   ([player] (let [class (->> player classes shuffle first val :name)
@@ -157,4 +172,5 @@
                         :weapon {:name (->> weapon val :name)
                                  :attachments attachments}
                         :sidearm (->> (pistols player) shuffle first val :name)
-                        :equipment (->> (random-equipment player class) (map :name))))))
+                        :equipment (->> (random-equipment player class) (map :name))
+                        :specialization (->> player specializations shuffle first val :name)))))
