@@ -6,7 +6,8 @@
                  [noir "1.2.2"]
                  [congomongo "0.1.7"]
                  [clj-stacktrace "0.2.4"]]
-    :jvm-opts ["-Xms350m" "-Xmx350m" "-server" "-XX:+UseConcMarkSweepGC"
+  :main bf3.server 
+  :jvm-opts ["-Xms350m" "-Xmx350m" "-server" "-XX:+UseConcMarkSweepGC"
              "-XX:+CMSIncrementalMode" "-XX:+UseCompressedOops"
              "-XX:+DoEscapeAnalysis" "-XX:+UseBiasedLocking"
              "-XX:PermSize=64M" "-XX:MaxPermSize=85M"])

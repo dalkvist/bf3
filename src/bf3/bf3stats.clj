@@ -3,6 +3,8 @@
             [clojure.string :as s])
   (:use [cheshire.core]))
 
+(declare *test-player-info* *test-weapond*)
+
 (def player-url "http://api.bf3stats.com/pc/player/")
 
 (def ^{:dynamic true} *underslig-weapons*
@@ -17,12 +19,6 @@
   (-> (client/get (str  player-url "/?player=" player "&opt=" ""))
                     :body
                     (parse-string true)))
-
-(def ^{:dynamic true } *test-player-info*
-                (get-player-info "cairdazar"))
-
-(def ^{:dynamic true} *test-weapond*
-  (->> (class-weapons *test-player-info* "assault") first))
 
 (defn- get-class [class kits]
   "returns the class from kits"
@@ -174,3 +170,10 @@
                         :sidearm (->> (pistols player) shuffle first val :name)
                         :equipment (->> (random-equipment player class) (map :name))
                         :specialization (->> player specializations shuffle first val :name)))))
+
+
+(def ^{:dynamic true } *test-player-info*
+                (get-player-info "cairdazar"))
+
+(def ^{:dynamic true} *test-weapond*
+  (->> (class-weapons *test-player-info* "assault") first))
