@@ -42,6 +42,7 @@
 
 (defroutes public-routes
   (GET  "/" [] (layout (random-loadout)))
+  (GET  "/favicon.ico" [] "")
   (GET  "/:player" [player] (layout (random-loadout player)))
   (route/not-found "no here"))
 
