@@ -52,7 +52,7 @@
   (GET  "/kit/" [] (kit-wrapper (random-loadout)))
   (GET  "/favicon.ico" [] "")
   (GET  "/kit/:player" [player] (kit-wrapper (random-loadout player)))
-  (GET  "/gc/" [] (layout [:pre (encode (get-ts-users))]))
+  (GET  "/gc/" [] (layout (into [:div#users] (map #(vector :pre (encode %)) (get-ts-users)))))
   (GET  "/gc/update" [] (layout (save-live-users)))
   (route/not-found "no here"))
 
