@@ -7,8 +7,10 @@
                  [congomongo "0.1.7"]
                  [org.clojure/core.memoize "0.5.1"]
                  [org.clojure/core.cache "0.5.0"]
+                 [paddleguru/enlive "1.2.0-alpha1"]
+                 [clj-time "0.3.7"]
                  [clj-stacktrace "0.2.4"]]
-  :main bf3.core  
+  :main bf3.core
   :jvm-opts ["-Xms350m" "-Xmx350m" "-server" "-XX:+UseConcMarkSweepGC"
              "-XX:+CMSIncrementalMode" "-XX:+UseCompressedOops"
              "-XX:+DoEscapeAnalysis" "-XX:+UseBiasedLocking"
