@@ -6,7 +6,8 @@
         hiccup.page-helpers
         [bf3.bf3stats :only [random-loadout]]
         [bf3.db :only [get-ts-users]]
-        [bf3.ts :only [save-live-users]])
+        [bf3.ts :only [save-live-users]]
+        [cheshire.core :only [encode]])
   (:require (compojure [route :as route])
             (ring.util [response :as response])
             (ring.middleware [multipart-params :as mp])))
@@ -51,7 +52,7 @@
   (GET  "/kit/" [] (kit-wrapper (random-loadout)))
   (GET  "/favicon.ico" [] "")
   (GET  "/kit/:player" [player] (kit-wrapper (random-loadout player)))
-  (GET  "/gc/" [] (layout (get-ts-users)))
+  (GET  "/gc/" [] (layout [:pre (encode (get-ts-users))]))
   (GET  "/gc/update" [] (layout (save-live-users)))
   (route/not-found "no here"))
 
