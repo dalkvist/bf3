@@ -7,7 +7,7 @@
         [bf3.bf3stats :only [random-loadout]]
         [bf3.db :only [get-ts-users]]
         [bf3.db :only [get-bl-users]]
-        [cheshire.core :only [encode]])
+        [cheshire.core :only [encode generate-string]])
   (:require (compojure [route :as route])
             (ring.util [response :as response])
             (ring.middleware [multipart-params :as mp])
@@ -57,7 +57,7 @@
   (GET  "/kit/:player" [player] (kit-wrapper (random-loadout player)))
   (GET  "/gc/" [] (layout "GC stuff"))
   (GET  "/gc/ts-users.json" [] (res/json (encode (get-ts-users))))
-  (GET  "/gc/bl-users.json" [] (res/json (encode (get-bl-users))))
+  (GET  "/gc/bl-users.json" [] (res/json (generate-string (get-bl-users))))
   (GET  "/gc/update" [] (layout (do (bl/save-live-users)
                                     (ts/save-live-users))))
   (route/not-found "no here"))
