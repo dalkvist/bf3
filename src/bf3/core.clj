@@ -6,11 +6,14 @@
         hiccup.page-helpers
         [bf3.bf3stats :only [random-loadout]]
         [bf3.db :only [get-ts-users]]
-        [bf3.ts :only [save-live-users]]
+        [bf3.db :only [get-bl-users]]
         [cheshire.core :only [encode]])
   (:require (compojure [route :as route])
             (ring.util [response :as response])
-            (ring.middleware [multipart-params :as mp])))
+            (ring.middleware [multipart-params :as mp])
+            [noir.response :as res]
+            [bf3.ts :as ts]
+            [bf3.bl :as bl]))
 
 (defpartial layout [& content]
             (html5
@@ -52,8 +55,11 @@
   (GET  "/kit/" [] (kit-wrapper (random-loadout)))
   (GET  "/favicon.ico" [] "")
   (GET  "/kit/:player" [player] (kit-wrapper (random-loadout player)))
-  (GET  "/gc/" [] (layout (into [:div#users] (map #(vector :pre (encode %)) (get-ts-users)))))
-  (GET  "/gc/update" [] (layout (save-live-users)))
+  (GET  "/gc/" [] (layout "GC stuff"))
+  (GET  "/gc/ts-users.json" [] (res/json (encode (get-ts-users))))
+  (GET  "/gc/bl-users.json" [] (res/json (encode (get-bl-users))))
+  (GET  "/gc/update" [] (layout (do (bl/save-live-users)
+                                    (ts/save-live-users))))
   (route/not-found "no here"))
 
 (def my-app
