@@ -37,15 +37,17 @@
   "get user from the battlelog server"
   ([] (get-live-users (->> server-ids vals first)))
   ([id]
-     (->> (get-players-on-server id)
-       :players
-       (map #(->> % :persona :personaName) ))))
+     (hash-map :time (get-current-iso-8601-date)
+               :users (->> (get-players-on-server id)
+                           :players
+                           (map #(-> % :persona :personaId)))
+               :server id)))
 
 (def get-users (mem/memo-ttl get-live-users *cache-time*))
 
 (defn save-live-users []
   (doseq [[server id] server-ids]
-    (save-bl-user! (hash-map :time (get-current-iso-8601-date) :users (get-users id) :server server))))
+    (save-bl-user! (get-users))))
 
 (defn -main [& m]
  (save-live-users))
