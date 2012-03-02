@@ -61,7 +61,7 @@
   (GET  "/gc/ts-stats.json" [] (res/json (get-stats (get-ts-users))))
   (GET  "/gc/bl-stats.json" [] (res/json (get-stats (get-bl-users))))
   (GET  "/gc/ts-stats/:player.json" [player] (res/json (first (filter (fn [[key]] (= key player)) (get-stats (get-ts-users))))))
-  (GET  "/gc/bl-stabl/:player.json" [player] (res/json (first (filter (fn [[key]] (= key player)) (get-stats (get-bl-users))))))
+  (GET  "/gc/bl-stats/:player.json" [player] (res/json (first (filter (fn [[key]] (= key player)) (get-stats (get-bl-users))))))
   (GET  "/gc/update" [] (layout (do (bl/save-live-users)
                                     (ts/save-live-users))))
   (route/not-found "no here"))
