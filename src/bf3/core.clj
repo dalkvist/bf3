@@ -56,7 +56,7 @@
   (GET  "/favicon.ico" [] "")
   (GET  "/kit/:player" [player] (kit-wrapper (random-loadout player)))
   (GET  "/gc/" [] (layout "GC stuff"))
-  (GET  "/gc/ts-users.json" [] (res/json (encode (get-ts-users))))
+  (GET  "/gc/ts-users.json" [] (res/json (get-ts-users)))
   (GET  "/gc/bl-users.json" [] (res/json (generate-string (get-bl-users))))
   (GET  "/gc/update" [] (layout (do (bl/save-live-users)
                                     (ts/save-live-users))))
