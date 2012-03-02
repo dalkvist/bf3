@@ -25,9 +25,13 @@
                 )))
       )))
 
+(defn- clean-users [user]
+  (select-keys user (remove #(= :_id %) (keys user))))
+
 (defn get-ts-users []
   (maybe-init)
-  (fetch :ts-users))
+  (map clean-users
+       (fetch :ts-users)))
 
 (defn save-ts-user! [ts-user]
   (maybe-init)
@@ -35,7 +39,8 @@
 
 (defn get-bl-users []
   (maybe-init)
-  (fetch :bl-users))
+  (map clean-users
+       (fetch :bl-users)))
 
 (defn save-bl-user! [bl-user]
   (maybe-init)
