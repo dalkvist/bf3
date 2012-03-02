@@ -17,7 +17,7 @@
       (println "Initializing mongo @ " mongo-url)
       (mongo! :db (:db config) :host (:host config) :port (Integer. (:port config))) ;; Setup global mongo.
       (authenticate (:user config) (:pass config)) ;; Setup u/p.
-      (doseq [coll [:ts-users]]
+      (doseq [coll [:ts-users :bl-users]]
         (or (collection-exists? coll);; Create collection if it doesn't exist.
             (do (create-collection! coll)
                 ;; (when (= coll :traderausers)
@@ -32,3 +32,11 @@
 (defn save-ts-user! [ts-user]
   (maybe-init)
   (insert! :ts-users ts-user))
+
+(defn get-bl-users []
+  (maybe-init)
+  (fetch :bl-users))
+
+(defn save-bl-user! [bl-user]
+  (maybe-init)
+  (insert! :bl-users bl-user))
