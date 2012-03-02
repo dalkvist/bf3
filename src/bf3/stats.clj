@@ -48,6 +48,6 @@
 (defn- get-live-stats
   "get user stats from the coll"
   ([coll]
-     (sort-by first (test-stats coll))))
+     (sort-by first (parse-stats coll))))
 
 (def get-stats (mem/memo-ttl get-live-stats *cache-time*))
