@@ -7,8 +7,26 @@
                  [congomongo "0.1.7"]
                  [org.clojure/core.memoize "0.5.1"]
                  [org.clojure/core.cache "0.5.0"]
+                 [net.sourceforge.htmlunit/htmlunit "2.9"
+                            :exclusions [javax.mail/mail
+                                         javax.jms/jms
+                                         com.sun.jdmk/jmxtools
+                                         com.sun.jmx/jmxri
+                                         org.seleniumhq.selenium/selenium-firefox-driver
+                                         org.seleniumhq.selenium/selenium-htmlunit-driver
+                                         org.seleniumhq.selenium/selenium-ie-driver
+                                         org.slf4j/slf4j-api
+                                         org.slf4j/slf4j-log4j12
+                                         log4j
+                                         junit
+                                         jfree
+                                         gsbase
+                                         commons-fileupload
+                                         ]]
                  [clj-stacktrace "0.2.4"]]
-  :main bf3.core  
+  :repositories {"HtmlUnitSnapshots"
+                 "http://htmlunit.sourceforge.net/m2-repo-snapshots"}
+  :main bf3.core
   :jvm-opts ["-Xms350m" "-Xmx350m" "-server" "-XX:+UseConcMarkSweepGC"
              "-XX:+CMSIncrementalMode" "-XX:+UseCompressedOops"
              "-XX:+DoEscapeAnalysis" "-XX:+UseBiasedLocking"
