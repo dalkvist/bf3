@@ -5,8 +5,8 @@
         hiccup.core
         hiccup.page-helpers
         [bf3.bf3stats :only [random-loadout]]
-        [bf3.db :only [get-ts-users]]
-        [bf3.db :only [get-bl-users]]
+        [bf3.db :only [get-ts-users get-bl-users]]
+        [bf3.stats :only [get-stats]]
         [cheshire.core :only [encode generate-string]])
   (:require (compojure [route :as route])
             (ring.util [response :as response])
@@ -57,7 +57,11 @@
   (GET  "/kit/:player" [player] (kit-wrapper (random-loadout player)))
   (GET  "/gc/" [] (layout "GC stuff"))
   (GET  "/gc/ts-users.json" [] (res/json (get-ts-users)))
-  (GET  "/gc/bl-users.json" [] (res/json (generate-string (get-bl-users))))
+  (GET  "/gc/bl-users.json" [] (res/json (get-bl-users)))
+  (GET  "/gc/ts-stats.json" [] (res/json (get-stats (get-ts-users))))
+  (GET  "/gc/bl-stats.json" [] (res/json (get-stats (get-bl-users))))
+  (GET  "/gc/ts-stats/:player.json" [player] (res/json (filter (fn [[key]] (= key player)) (get-stats (get-ts-users)))))
+  (GET  "/gc/bl-stabl/:player.json" [player] (res/json (filter (fn [[key]] (= key player)) (get-stats (get-bl-users)))))
   (GET  "/gc/update" [] (layout (do (bl/save-live-users)
                                     (ts/save-live-users))))
   (route/not-found "no here"))
