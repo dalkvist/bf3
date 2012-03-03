@@ -46,15 +46,16 @@
 (def get-users (mem/memo-ttl get-live-users *cache-time*))
 
 (defn- get-origin-username [soldier-id]
-  (->  (client/get (str "http://battlelog.battlefield.com/bf3/overviewPopulateStats/" soldier-id "/a/1/"))
-       :body (parse-string true)
-       :data :user :username))
+  (try (->  (client/get (str "http://battlelog.battlefield.com/bf3/overviewPopulateStats/" soldier-id "/a/1/"))
+            :body (parse-string true)
+            :data :user :username)
+       (catch Exception ex)))
 
 (def get-username (mem/memo-ttl get-origin-username *cache-time*))
 
 (defn save-live-users []
   (doseq [[server id] server-ids]
-    (save-bl-user! (get-users))))
+    (save-bl-user! (get-users id))))
 
 (defn -main [& m]
  (save-live-users))
