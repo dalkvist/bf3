@@ -30,10 +30,7 @@
         intervals (atom {})]
     (doseq [row (sort-by :time rows)]
       (doseq [user (:users row)]
-        (when (= "2012-03-01T22:36:06Z" (:time row)
-                 ;; "[KCEO] Shrapnel"
-                 ;; "[K11B]cairdazar"
-                 )
+        (when (= "2012-03-01T22:36:06Z" (:time row))
           (debug user " time: " (:time row) "  contains?" (contains? @users user)))
         (if (contains? @users user)
           (swap! users assoc user (assoc (get @users user) :last-seen (:time row)))
