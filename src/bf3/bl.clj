@@ -45,13 +45,32 @@
 
 (def get-users (mem/memo-ttl get-live-users *cache-time*))
 
+
+(defn- get-test-users [] (-> (client/get "http://bf3.herokuapp.com/gc/bl-users.json" )
+                        :body
+                        (parse-string true)))
+
+(def test-users (mem/memo-ttl get-test-users *cache-time*))
+
 (defn- get-origin-username [soldier-id]
-  (try (->  (client/get (str "http://battlelog.battlefield.com/bf3/overviewPopulateStats/" soldier-id "/a/1/"))
-            :body (parse-string true)
-            :data :user :username)
+  (try
+       (-> (client/get (str "http://battlelog.battlefield.com/bf3/overviewPopulateStats/"
+                            soldier-id "/a/1/"))
+           :body (parse-string true)
+           :data :user :username)
        (catch Exception ex)))
 
 (def get-username (mem/memo-ttl get-origin-username *cache-time*))
+
+(defn- get-user-info [username]
+  (->> (-> (client/get (str "http://battlelog.battlefield.com/bf3/user/" username "/")
+                       {:headers {"X-AjaxNavigation" "1"}})
+           :body (parse-string true) :context :soldiersBox)
+       (filter #(= "cem_ea_id" (s/lower-case (get-in % [:persona :namespace]))))
+       (map :persona)
+       (map #(select-keys % [:userId :personaId :clanTag :personaName]))))
+
+(def get-user (mem/memo-ttl get-user-info *cache-time*))
 
 (defn save-live-users []
   (doseq [[server id] server-ids]
