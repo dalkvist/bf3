@@ -67,8 +67,8 @@
   (GET  "/gc/bl-users.json" [] (res/json (get-bl-users)))
   (GET  "/gc/bl-stats.json" [] (res/json (get-stats (get-bl-users))))
   (GET  "/gc/bl-stats/:player.json" [player]
-    (res/json (first (filter (fn [[key]] (or (some (map #(= key (:personaId %))
-                                                       (bl/get-user player)))
+    (res/json (first (filter (fn [[key]] (or (some #(= key (:personaId %))
+                                                  (bl/get-user player))
                                             (= key player)))
                              (get-stats (get-bl-users))))))
 
