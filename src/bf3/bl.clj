@@ -52,20 +52,37 @@
 
 (def test-users (mem/memo-ttl get-test-users *cache-time*))
 
-(defn- get-origin-username [soldier-id]
+(defn- get-origin-info [soldier-id]
   (try
        (-> (client/get (str "http://battlelog.battlefield.com/bf3/overviewPopulateStats/"
                             soldier-id "/a/1/"))
            :body (parse-string true)
-           :data :user :username)
+           :data :user (select-keys [:username :userId]))
        (catch Exception ex)))
 
-(def get-username (mem/memo-ttl get-origin-username *cache-time*))
+(def origin-info (mem/memo-ttl get-origin-info *cache-time*))
 
-(defn- get-user-info [username]
-  (->> (-> (client/get (str "http://battlelog.battlefield.com/bf3/user/" username "/")
-                       {:headers {"X-AjaxNavigation" "1"}})
-           :body (parse-string true) :context :soldiersBox)
+(defn get-username [soldier-id]
+  (:username (origin-info soldier-id)))
+
+(defn get-userid [soldier-id]
+  (:userId (origin-info soldier-id)))
+
+(defn- user-by-name [name]
+  (-> (client/get (str "http://battlelog.battlefield.com/bf3/user/" name "/")
+                  {:headers {"X-AjaxNavigation" "1"}})
+      :body (parse-string true) :context :soldiersBox))
+
+(defn- user-by-id [id]
+  (-> (client/get (str "http://battlelog.battlefield.com/bf3/user/overviewBoxStats/" id "/")
+                  {:headers {"X-AjaxNavigation" "1"}})
+      :body (parse-string true) :data :soldiersBox))
+
+(defn- get-user-info [user]
+  (->> (if (try (every? #(Integer/parseInt (str %)) user)
+                (catch Exception ex false))
+         (user-by-id user)
+         (user-by-name user))
        (filter #(= "cem_ea_id" (s/lower-case (get-in % [:persona :namespace]))))
        (map :persona)
        (map #(select-keys % [:userId :personaId :clanTag :personaName]))))
