@@ -25,30 +25,52 @@
                         :body
                         (parse-string true)))
 
+(defn- test-users3 [] (-> (client/get "http://bf3.herokuapp.com/gc/bl-users.json" )
+                        :body
+                        (parse-string true)))
+
+(defn- parti)
+
 (defn- parse-stats [rows]
   (let [users (atom {})
-        intervals (atom {})]
-    (doseq [row (sort-by :time rows)]
-      (doseq [user (:users row)]
-        (when (= "2012-03-01T22:36:06Z" (:time row))
-          (debug user " time: " (:time row) "  contains?" (contains? @users user)))
-        (if (contains? @users user)
-          (swap! users assoc user (assoc (get @users user) :last-seen (:time row)))
-          (swap! users assoc user (hash-map :first-seen (:time row)))))
-      (doseq [user (keys @users)]
-        (when (= "2012-03-01T22:41:06Z" (:time row))
-          (debug user " time: " (:time row) "  contains?" (contains? @users user)
-                   " not-any? " (not-any? #(= % user) (:users row))))
-        (when (not-any? #(= % user) (:users row))
-          (swap! intervals assoc user (conj (get @intervals user []) (get @users user) ))
-          (swap! users dissoc user))))
-    (doseq [user (keys @users)]
-      (when-not (:last-seen user)
-        (swap! intervals assoc user
-               (conj (get @intervals user [])
-                     (assoc (get @users user)
-                       :last-seen (:time (last rows)))))))
-    @intervals))
+        stats (atom {})
+        current-time (:time (last rows))]
+
+    (doseq [server-rows (->> rows (sort-by :server) (partition-by :server))]
+      (doseq [row (sort-by :time server-rows)]
+        ;;logg all online users
+        (doseq [user (:users row)]
+          (if (contains? @users user)
+            (swap! users assoc-in [user :last-seen]  (:time row))
+            (swap! users assoc user {:first-seen (:time row) :server (:server row)})
+            ))
+
+        ;;update offline users
+        (doseq [[user stat] @users]
+          (when (not-any? #(= % user) (:users row))
+            (swap! stats assoc user (conj (get @stats user []) stat))
+            (swap! users dissoc user)))
+        )
+
+      ;;update users currently online
+        (doseq [[user stat] @users]
+          (swap! stats assoc user (conj (get @stats user [])
+                                        (if (nil? (:last-seen stat))
+                                          (assoc stat :last-seen current-time)
+                                          stat)))
+          (swap! users dissoc user))
+
+      ;; (doseq [user @users]
+      ;;   ;; (println "u:" user "\nid:" (key user) "\nstats:" (val user))
+      ;;   (swap! intervals merge (get @intervals (key user) {})
+      ;;          {(key user) (first (for [server (val user)]
+      ;;                               (do ;; (println "s:" server "\nsid:" (key server) "\nss:" (val server))
+      ;;                                 (if-not (:last-seen (val server))
+      ;;                                   {(key server) (assoc (val server) :last-seen current-time)}
+      ;;                                   (apply hash-map server)))))})
+      ;;   (swap! users dissoc (key user)))
+      )
+    @stats))
 
 (defn- get-live-stats
   "get user stats from the coll"
