@@ -72,7 +72,7 @@
                                             (= key player)))
                              (get-stats (get-bl-users))))))
 
-  (GET  "/gc/roster" [] (layout (:h1 "roster for battleday " (bf3.stats/get-battleday))
+  (GET  "/gc/roster" [] (layout [:h1 "roster for battleday " (bf3.stats/get-battleday)]
                                 (->> (battleday-roster (get-stats (get-bl-users))) (interpose "<br/>"))))
 
   (GET  "/gc/update" [] (layout (do (bl/save-live-users)
