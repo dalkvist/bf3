@@ -94,5 +94,5 @@
       (parse-string true)))
 
 (defn- get-active-users [stats]
-  (->> stats  (map first) distinct (pmap #(->> % bf3.bl/get-username ))
+  (->> stats (map first) distinct (pmap #(->> % bf3.bl/get-username ))
        (filter #(not-empty %))))
