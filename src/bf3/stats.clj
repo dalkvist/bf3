@@ -29,7 +29,16 @@
                         :body
                         (parse-string true)))
 
-(defn- parti)
+(defn- get-battleday
+  "Return the a battledat interval, :prev for the latest one, and :next for the next one"
+  ([] (get-battleday :prev))
+  ([with] (->> (time/now) (time/day-of-week)
+               ((fn [weekday] (if (= :next with)
+                      (->> weekday (#(+ % 6)) (#(mod % 7)) (#(if (= % 0) 7 %)) time/days (time/plus  (time/now)))
+                      (->> weekday (#(- 6 %)) Math/abs time/days (time/minus (time/now))))))
+               (#(time/date-time (time/year %) (time/month %) (time/day %) 18 0 0 0))
+               (#(time/interval % (time/plus % (time/hours 6) ))))))
+
 
 (defn- parse-stats [rows]
   (let [users (atom {})
@@ -78,3 +87,12 @@
      (sort-by first (parse-stats coll))))
 
 (def get-stats (mem/memo-ttl get-live-stats *cache-time*))
+
+(defn- test-stats []
+  (-> (client/get "http://bf3.herokuapp.com/gc/bl-stats.json" )
+      :body
+      (parse-string true)))
+
+(defn- get-active-users [stats]
+  (->> stats  (map first) distinct (pmap #(->> % bf3.bl/get-username ))
+       (filter #(not-empty %))))
