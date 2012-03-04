@@ -4,7 +4,8 @@
             [clojure.core.cache :as cache]
             [clojure.core.memoize :as mem]
             [clj-time.core :as time]
-            [clj-time.format :as time-format])
+            [clj-time.format :as time-format]
+            [bf3.bl :as bl])
   (:use [cheshire.core]
         [net.cgrand.enlive-html]
         [bf3.db])
@@ -105,15 +106,16 @@
   (filter #(time/overlaps? (get-battleday) (stat-interval %)) user-stats))
 
 (defn- get-active-users [stats]
-  (->> stats (map :user) distinct (pmap #(->> % bf3.bl/get-username ))
+  (->> stats (map :user) distinct (pmap #(->> % bl/get-username ))
        (filter #(not-empty %))))
 
+;;TODO take used servers as list, alt check if bl can give private flag
 (defn- roster-last-battleday ([] (roster-last-battleday (test-stats)))
   ([stats] (->> stats
                 (mapcat #(for [stat (last %)]
                            (assoc stat :user (first %))))
-                (filter #(or (= (:server %) (:eu  bf3.bl/server-ids))
-                             (= (:server %) (:new-york bf3.bl/server-ids))))
+                (filter #(or (= (:server %) (:eu       bl/server-ids))
+                             (= (:server %) (:new-york bl/server-ids))))
                 attended-battleday
                 get-active-users
                 (map s/lower-case)
