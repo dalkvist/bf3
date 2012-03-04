@@ -6,7 +6,7 @@
         hiccup.page-helpers
         [bf3.bf3stats :only [random-loadout]]
         [bf3.db :only [get-ts-users get-bl-users]]
-        [bf3.stats :only [get-stats]]
+        [bf3.stats :only [get-stats battleday-roster]]
         [cheshire.core :only [encode generate-string]])
   (:require (compojure [route :as route])
             (ring.util [response :as response])
@@ -71,6 +71,9 @@
                                                   (bl/get-user player))
                                             (= key player)))
                              (get-stats (get-bl-users))))))
+
+  (GET  "/gc/roster" [] (layout (:h1 "roster for battleday " (bf3.stats/get-battleday))
+                                (->> (battleday-roster (get-stats (get-bl-users))) (interpose "<br/>"))))
 
   (GET  "/gc/update" [] (layout (do (bl/save-live-users)
                                     (ts/save-live-users))))

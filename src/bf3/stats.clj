@@ -29,7 +29,7 @@
                         :body
                         (parse-string true)))
 
-(defn- get-battleday
+(defn get-battleday
   "Return the a battledat interval, :prev for the latest one, and :next for the next one"
   ([] (get-battleday :prev))
   ([with] (->> (time/now) (time/day-of-week)
@@ -88,11 +88,36 @@
 
 (def get-stats (mem/memo-ttl get-live-stats *cache-time*))
 
-(defn- test-stats []
+(defn- get-test-stats []
   (-> (client/get "http://bf3.herokuapp.com/gc/bl-stats.json" )
       :body
       (parse-string true)))
 
+
+(def test-stats (mem/memo-ttl get-test-stats *cache-time*))
+
+
+(defn- stat-interval [stat]
+  (time/interval (time-format/parse (:first-seen stat))
+                 (time-format/parse (:last-seen stat))))
+
+(defn- attended-battleday [user-stats]
+  (filter #(time/overlaps? (get-battleday) (stat-interval %)) user-stats))
+
 (defn- get-active-users [stats]
-  (->> stats (map first) distinct (pmap #(->> % bf3.bl/get-username ))
+  (->> stats (map :user) distinct (pmap #(->> % bf3.bl/get-username ))
        (filter #(not-empty %))))
+
+(defn- roster-last-battleday ([] (roster-last-battleday (test-stats)))
+  ([stats] (->> stats
+                (mapcat #(for [stat (last %)]
+                           (assoc stat :user (first %))))
+                (filter #(or (= (:server %) (:eu  bf3.bl/server-ids))
+                             (= (:server %) (:new-york bf3.bl/server-ids))))
+                attended-battleday
+                get-active-users
+                (map s/lower-case)
+                distinct
+                sort)))
+
+(def battleday-roster (mem/memo-ttl roster-last-battleday *cache-time*))
