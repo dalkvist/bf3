@@ -103,7 +103,10 @@
                  (time-format/parse (:last-seen stat))))
 
 (defn- attended-battleday [user-stats]
-  (filter #(time/overlaps? (get-battleday) (stat-interval %)) user-stats))
+  (filter #(time/overlaps? ;; (get-battleday)
+            (time/interval (time/date-time 2012 3 3 18)
+                           (time/date-time 2012 3 4 0))
+            (stat-interval %)) user-stats))
 
 (defn- get-active-users [stats]
   (->> stats (map :user) distinct (pmap #(->> % bl/get-username ))
@@ -114,12 +117,15 @@
   ([stats] (->> stats
                 (mapcat #(for [stat (last %)]
                            (assoc stat :user (first %))))
-                (filter #(or (= (:server %) (:eu       bl/server-ids))
-                             (= (:server %) (:new-york bl/server-ids))))
                 attended-battleday
-                get-active-users
-                (map s/lower-case)
-                distinct
-                sort)))
+                (filter (fn [s] (some #(= % (:server s)) (vals bl/server-ids))))
+                (sort-by :server)
+                (partition-by :server)
+                (map #(hash-map :server (:server (first %))
+                                :users (->> %
+                                            get-active-users
+                                            (map s/lower-case)
+                                            distinct
+                                            sort))))))
 
 (def battleday-roster (mem/memo-ttl roster-last-battleday *cache-time*))
