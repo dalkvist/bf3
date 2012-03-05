@@ -77,7 +77,7 @@
       (layout [:h1 "roster for battleday 2012-03-03" ]
               (into [:div#roster]
                     (for [server roster]
-                      (list [:h2 (str "server " (->> server :server))]
+                      (list [:h2 (str "server " (->> (filter #(= (last %) (->> server :server)) bl/server-ids) first key))]
                             (->>  server :users (interpose "<br/>"))))))))
 
   (GET  "/gc/update" [] (layout (do (bl/save-live-users)
