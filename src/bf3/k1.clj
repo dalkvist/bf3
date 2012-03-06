@@ -18,11 +18,26 @@
 
 (def k1-url "https://docs.google.com/spreadsheet/ccc?key=0AolGselmDdqedDhnMkZGNXdZQWFON3JoTjd0WGs3c0E")
 
-(def ^{:dynamic true} *cache-time* (* 2 60 1000))
+(def k1-url-2 "https://docs.google.com/spreadsheet/lv?key=0AolGselmDdqedDhnMkZGNXdZQWFON3JoTjd0WGs3c0E")
 
+(def ^{:dynamic true} *cache-time* (* 30 60 1000))
 
-(defn- k1-info [player]
+(defstruct player :forum-name :origin-name :rank :branch :jet :halo :armor)
+
+(defn- get-player-info [_ f-name o-name rank branch _ jet halo armor _]
+  (struct player f-name o-name rank branch (not (empty? jet)) (not (empty? halo)) (not (empty? armor))))
+
+(defn- get-k1-players []
+  (->> (.getByXPath (.getPage @client k1-url-2)
+        "//table[@id='tblMain']//tr") (drop 1)
+       (map (fn [row] (->>  row .getCells (map #(.asText %)) (apply get-player-info))))))
+
+(def k1-players (mem/memo-ttl get-k1-players *cache-time*))
+
+(defn- k1-info [player-name]
   "get the k1 info from the google document"
-  )
+  (first (filter #(or  (= (s/lower-case player-name) (s/lower-case (:forum-name %)))
+                       (= (s/lower-case player-name) (s/lower-case (:origin-name %))))
+                 (k1-players))))
 
 (def get-k1-info (mem/memo-ttl k1-info *cache-time*))
