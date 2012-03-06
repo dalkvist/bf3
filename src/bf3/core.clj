@@ -7,11 +7,13 @@
         [bf3.bf3stats :only [random-loadout]]
         [bf3.db :only [get-ts-users get-bl-users]]
         [bf3.stats :only [get-stats battleday-roster get-battleday]]
+        [bf3.ki :only [ki-players]]
         [cheshire.core :only [encode generate-string]])
   (:require (compojure [route :as route])
             (ring.util [response :as response])
             (ring.middleware [multipart-params :as mp])
             [noir.response :as res]
+            [clojure.string :as s]
             [bf3.ts :as ts]
             [bf3.bl :as bl]))
 
@@ -80,6 +82,17 @@
                     (for [server roster]
                       (list [:h2 (str "server " (->> (filter #(= (last %) (->> server :server)) bl/server-ids) first key))]
                             (->>  server :users (interpose "<br/>"))))))))
+
+  (GET  "/gc/roster/:army" [army]
+    (let [ki (= (s/lower-case army) "ki")
+              roster (battleday-roster (get-stats (get-bl-users)))]
+          (layout [:h1 "roster for battleday " (get-battleday)]
+                  (into [:div#roster]
+                        (for [server roster]
+                          (list [:h2 (str "server " (->> (filter #(= (last %) (->> server :server)) bl/server-ids) first key))]
+                                (->> (if ki (filter (fn [user] (not-any? #(= (s/lower-case %) user) ki-players) (:users server)))
+                                         (filter (fn [user] (some     #(= (s/lower-case %) user) ki-players)) (:users server)))
+                                     (interpose "<br/>"))))))))
 
   (GET  "/gc/update" [] (layout (do (bl/save-live-users)
                                     (ts/save-live-users))))
