@@ -7,7 +7,7 @@
         [bf3.bf3stats :only [random-loadout]]
         [bf3.db :only [get-ts-users get-bl-users]]
         [bf3.stats :only [get-stats battleday-roster get-battleday]]
-        [bf3.ki :only [ki-players get-ki-info]]
+        [bf3.ki :only [ki-players get-ta-info get-ki-info]]
         [cheshire.core :only [encode generate-string]])
   (:require (compojure [route :as route])
             (ring.util [response :as response])
@@ -74,26 +74,27 @@
                                             (= key player)))
                              (get-stats (get-bl-users))))))
 
-  (GET  "/gc/roster" [weeks-ago]
-    (let [weeks (if-not weeks-ago 1 weeks-ago)
-          roster (battleday-roster (get-stats (get-bl-users)) :weeks weeks)]
-      (layout [:h1 "roster for battleday " (get-battleday)]
-              (into [:div#roster]
-                    (for [server roster]
-                      (list [:h2 (str "server " (->> (filter #(= (last %) (->> server :server)) bl/server-ids) first key))]
-                            (->>  server :users (interpose "<br/>"))))))))
-
-  (GET  "/gc/roster/:army" [army]
-    (let [ki (= (s/lower-case army) "ki")
-              roster (battleday-roster (get-stats (get-bl-users)))]
-          (layout [:h1 "roster for battleday " (get-battleday)]
-                  (into [:div#roster]
-                        (for [server roster]
-                          (list [:h2 (str "server " (->> (filter #(= (last %) (->> server :server)) bl/server-ids) first key))]
-                                (->> (:users server)
-                                     (filter #(if ki (get-ki-info %)
-                                                  (not (get-ki-info %))))
-                                     (interpose "<br/>"))))))))
+  (GET  "/gc/roster" []
+    (let [roster (battleday-roster (get-stats (get-bl-users)))]
+                  (layout [:h1 "roster for battleday " (get-battleday)]
+                          (into [:div#roster]
+                                (for [server roster]
+                                     (list [:h2 (str "server " (->> (filter #(= (last %) (->> server :server)) bl/server-ids)
+                                                                    first key))]
+                                           (->> (:users server)
+                                                (map #(if (get-ki-info %)
+                                                       (hash-map :origin-name % :army "KI")
+                                                       (if (get-ta-info %)
+                                                           (hash-map :origin-name % :army "TA")
+                                                           (hash-map :origin-name % :army "HiT (not ki or ta)")
+                                                           )))
+                                                (sort-by :army)
+                                                (partition-by :army)
+                                                reverse
+                                                (map (fn [army]  (list [:h3 (->> army first :army)]
+                                                                      (->> army
+                                                                           (map #(:origin-name %) )
+                                                                           (interpose "<br/>"))))))))))))
 
   (GET  "/gc/update" [] (layout (do (bl/save-live-users)
                                     (ts/save-live-users))))
