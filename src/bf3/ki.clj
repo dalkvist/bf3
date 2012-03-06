@@ -30,9 +30,32 @@
 (defn- get-ki-players []
   (->> (.getByXPath (.getPage @client ki-url-2)
         "//table[@id='tblMain']//tr") (drop 1)
-       (map (fn [row] (->>  row .getCells (map #(.asText %)) (apply get-player-info))))))
+        (map (fn [row] (->>  row .getCells (map #(.asText %)) (apply get-player-info))))
+        (concat [(struct player "XrunawayX" "XrunawayX" "K2AD" "K2" false false false)
+                 (struct player "a432" "a432" "K2AD" "K2" false false false)
+                 (struct player "Cheesy" "ExtraCheesy" "K2VD" "K2" false false false)
+                 (struct player "Chefcook" "Chefcook78" "K2MD" "K2" false false false)
+                 (struct player "Spreey" "Spreey" "K1AD" "K11" false false false)
+                 (struct player "J0n3s" "JonesRulez" "K1AD" "K12" false false false)
+                 (struct player "Robawillis" "robawillis" "KVD" "K1" false false false)
+                 (struct player ".Sup" "dotSup" "K1MD" "K1" false false false)
+                 (struct player "Goggles" "GogglesDoNothing" "KIO" "K" false false false)
+                 (struct player "Shrapnel" "GCShrapnel" "KCEO" "K" false false false)])))
 
 (def ki-players (mem/memo-ttl get-ki-players *cache-time*))
+
+(defn tas []
+  [(struct player "madcow" "madcow844" "TA" "TA" false false false)
+   (struct player "styphon" "StyphonUK" "TA" "TA" false false false)
+   (struct player "Von_Krieg" "Von_Krieg_1" "TA" "TA" false false false)
+   (struct player "CountBelasarius" "dukebelasarius" "TA" "TA" false false false)])
+
+(defn- ta-info [player-name]
+(first (filter #(or  (= (s/lower-case player-name) (s/lower-case (:forum-name %)))
+                       (= (s/lower-case player-name) (s/lower-case (:origin-name %))))
+               (tas))))
+
+(def get-ta-info (mem/memo-ttl ta-info *cache-time*))
 
 (defn- ki-info [player-name]
   "get the ki info from the google document"
