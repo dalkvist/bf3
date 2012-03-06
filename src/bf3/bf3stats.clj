@@ -101,6 +101,13 @@
                          (= (s/lower-case "pistols")
                             (-> % val :category  s/lower-case)))))))
 
+;;stars
+(comment
+  (->> *test-player-info* classes (mapcat #(->> % val :name (class-weapons *test-player-info*)))
+       (filter #(> 1 (->> % val :star :count)))
+       keys
+       ))
+
 (defn- default-equipment [class]
   "returns the additional equitment for the class (starting equitment and mislabeled weapons)"
   (let [player *test-player-info*
