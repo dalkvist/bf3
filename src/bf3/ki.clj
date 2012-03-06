@@ -5,13 +5,14 @@
             [clojure.core.memoize :as mem])
   (:use [cheshire.core])
   (:import java.net.URL
-           (com.gargoylesoftware.htmlunit BrowserVersion HttpMethod Page RefreshHandler WebClient WebRequestSettings)
+           (com.gargoylesoftware.htmlunit BrowserVersion HttpMethod Page RefreshHandler WebClient WebRequestSettings SilentCssErrorHandler)
            (com.gargoylesoftware.htmlunit.html HtmlAnchor HtmlForm HtmlPage HtmlTable HtmlTableRow)))
 
 (def ^:dynamic client (ref (new WebClient)))
 
 (.setThrowExceptionOnScriptError @client false)
 (.setThrowExceptionOnFailingStatusCode @client false)
+(.setCssErrorHandler @client (new SilentCssErrorHandler))
 
 
 (def api-url "https://spreadsheets.google.com/feeds/download/spreadsheets/Export?key=0AolGselmDdqedDhnMkZGNXdZQWFON3JoTjd0WGs3c0E&exportFormat=csv")
