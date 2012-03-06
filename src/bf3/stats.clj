@@ -30,15 +30,27 @@
                         :body
                         (parse-string true)))
 
+(defn- inc-date [dt]
+  (time/plus dt (time/days 1)))
+
+(defn- dec-date [dt]
+  (time/minus dt (time/days 1)))
+
+(defn- future-dates [& {:keys [dt]}] (iterate inc-date (if-not dt (time/now) dt)))
+
+(defn- prev-dates   [& {:keys [dt]}] (iterate dec-date (if-not dt (time/now) dt)))
+
+(defn- battleday? [dt] (= 6 (time/day-of-week dt)))
+
 (defn get-battleday
   "Return the a battledat interval, :prev for the latest one, and :next for the next one"
-  ([] (get-battleday :prev))
-  ([with] (->> (time/now) (time/day-of-week)
-               ((fn [weekday] (if (= :next with)
-                      (->> weekday (#(+ % 6)) (#(mod % 7)) (#(if (= % 0) 7 %)) time/days (time/plus  (time/now)))
-                      (->> weekday (#(- 6 %)) Math/abs time/days (time/minus (time/now))))))
-               (#(time/date-time (time/year %) (time/month %) (time/day %) 18 0 0 0))
-               (#(time/interval % (time/plus % (time/hours 6) ))))))
+  ([& {:keys [next weeks] :or {next false weeks 1}}]
+     (->> (time/now) (time/day-of-week)
+          ((fn [weekday] (if next
+                          (first (drop (dec weeks) (filter battleday? (future-dates ))))
+                          (first (drop (dec weeks) (filter battleday? (prev-dates )))))))
+          (#(time/date-time (time/year %) (time/month %) (time/day %) 18 0 0 0))
+          (#(time/interval % (time/plus % (time/hours 6) ))))))
 
 
 (defn- parse-stats [rows]
@@ -102,11 +114,9 @@
   (time/interval (time-format/parse (:first-seen stat))
                  (time-format/parse (:last-seen stat))))
 
-(defn- attended-battleday [user-stats]
-  (filter #(time/overlaps? ;; (get-battleday)
-            (time/interval (time/date-time 2012 3 3 18)
-                           (time/date-time 2012 3 4 0))
-            (stat-interval %)) user-stats))
+(defn- attended-battleday [& {:keys [stats weeks]}]
+  (filter #(time/overlaps? (get-battleday :weeks weeks)
+                           (stat-interval %)) stats))
 
 (defn- get-active-users [stats]
   (->> stats (map :user) distinct (pmap #(->> % bl/get-username ))
@@ -114,18 +124,19 @@
 
 ;;TODO take used servers as list, alt check if bl can give private flag
 (defn- roster-last-battleday ([] (roster-last-battleday (test-stats)))
-  ([stats] (->> stats
-                (mapcat #(for [stat (last %)]
-                           (assoc stat :user (first %))))
-                attended-battleday
-                (filter (fn [s] (some #(= % (:server s)) (vals bl/server-ids))))
-                (sort-by :server)
-                (partition-by :server)
-                (map #(hash-map :server (:server (first %))
-                                :users (->> %
-                                            get-active-users
-                                            (map s/lower-case)
-                                            distinct
-                                            sort))))))
+  ([stats & {:keys [weeks] :or {weeks 1}}]
+     (->> stats
+          (mapcat #(for [stat (last %)]
+                    (assoc stat :user (first %))))
+          (attended-battleday :weeks weeks :stats)
+          (filter (fn [s] (some #(= % (:server s)) (vals bl/server-ids))))
+          (sort-by :server)
+          (partition-by :server)
+          (map #(hash-map :server (:server (first %))
+                          :users (->> %
+                                      get-active-users
+                                      (map s/lower-case)
+                                      distinct
+                                      sort))))))
 
 (def battleday-roster (mem/memo-ttl roster-last-battleday *cache-time*))

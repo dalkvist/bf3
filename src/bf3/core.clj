@@ -6,7 +6,7 @@
         hiccup.page-helpers
         [bf3.bf3stats :only [random-loadout]]
         [bf3.db :only [get-ts-users get-bl-users]]
-        [bf3.stats :only [get-stats battleday-roster]]
+        [bf3.stats :only [get-stats battleday-roster get-battleday]]
         [cheshire.core :only [encode generate-string]])
   (:require (compojure [route :as route])
             (ring.util [response :as response])
@@ -72,9 +72,10 @@
                                             (= key player)))
                              (get-stats (get-bl-users))))))
 
-  (GET  "/gc/roster" []
-    (let [roster (battleday-roster (get-stats (get-bl-users)))]
-      (layout [:h1 "roster for battleday 2012-03-03" ]
+  (GET  "/gc/roster" [weeks-ago]
+    (let [weeks (if-not weeks-ago 1 weeks-ago)
+          roster (battleday-roster (get-stats (get-bl-users)) :weeks weeks)]
+      (layout [:h1 "roster for battleday " (get-battleday)]
               (into [:div#roster]
                     (for [server roster]
                       (list [:h2 (str "server " (->> (filter #(= (last %) (->> server :server)) bl/server-ids) first key))]
