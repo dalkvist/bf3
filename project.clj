@@ -9,6 +9,7 @@
                  [org.clojure/core.cache "0.5.0"]
                  [paddleguru/enlive "1.2.0-alpha1"]
                  [clj-time "0.3.7"]
+                 [org.clojure/core.logic "0.6.7"]
                  [net.sourceforge.htmlunit/htmlunit "2.9"
                             :exclusions [javax.mail/mail
                                          javax.jms/jms
