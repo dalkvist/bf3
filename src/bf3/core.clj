@@ -76,25 +76,25 @@
 
   (GET  "/gc/roster" []
     (let [roster (battleday-roster (get-stats (get-bl-users)))]
-                  (layout [:h1 "roster for battleday " (get-battleday)]
-                          (into [:div#roster]
-                                (for [server roster]
-                                     (list [:h2 (str "server " (->> (filter #(= (last %) (->> server :server)) bl/server-ids)
-                                                                    first key))]
-                                           (->> (:users server)
-                                                (map #(if (get-ki-info %)
-                                                       (hash-map :origin-name % :army "KI")
-                                                       (if (get-ta-info %)
-                                                           (hash-map :origin-name % :army "TA")
-                                                           (hash-map :origin-name % :army "HiT (not ki or ta)")
-                                                           )))
-                                                (sort-by :army)
-                                                (partition-by :army)
-                                                reverse
-                                                (map (fn [army]  (list [:h3 (->> army first :army)]
-                                                                      (->> army
-                                                                           (map #(:origin-name %) )
-                                                                           (interpose "<br/>"))))))))))))
+      (layout [:h1 "roster for battleday " (get-battleday)]
+              (into [:div#roster]
+                    (for [server roster]
+                      (list [:h2 (str "server " (->> (filter #(= (last %) (->> server :server)) bl/server-ids)
+                                                     first key))]
+                            (->> (:users server)
+                                 (map #(if (get-ki-info %)
+                                         (hash-map :origin-name % :army "KI")
+                                         (if (get-ta-info %)
+                                           (hash-map :origin-name % :army "TA")
+                                           (hash-map :origin-name % :army "HiT (not ki or ta)")
+                                           )))
+                                 (sort-by :army)
+                                 (partition-by :army)
+                                 reverse
+                                 (map (fn [army]  (list [:h3 (->> army first :army)]
+                                                       (->> army
+                                                            (map #(:origin-name %) )
+                                                            (interpose "<br/>"))))))))))))
 
   (GET  "/gc/update" [] (layout (do (bl/save-live-users)
                                     (ts/save-live-users))))
