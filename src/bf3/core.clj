@@ -108,20 +108,84 @@
   (response/redirect "/gc/stalking"))
 
 (defpage "/gc/stalking" []
-  (layout  [:ul (->> (vals bl/platoones) bl/get-playing-users
-                     (map (fn [[id s]] (hash-map :server-id id
-                                                :server-name (->> s :server :server :name)
-                                                :server-preset (bl/serverPrests (get-in s [:server :server :preset]))
-                                                :users (->> s :users (map #(select-keys (:user %)
-                                                                                        [:username :gravatarMd5 :userId ]))))))
-                     (map #(list [:li [:h4 (link-to (bl/get-server-url (:server-id %)) (:server-name %))
-                                       [:span.preset (str "(" (:server-preset %) ")")]]
-                                  [:div.users "Users: " (map (fn [u] [:div.user [:img {:src (str "http://gravatar.com/avatar/"
-                                                                                         (:gravatarMd5 u)
-                                                                                         "?s=32&d=mm")}]
-                                                              (:username u)])
-                                                      (:users %))]]))
-                     )]))
+  (layout   [:style {:type "text/css"} (gaka/css [:div#servers
+                                                   :background-color "#E5E5E5"
+                                                   :height "auto"
+                                                   :padding "10px"
+                                                   :max-width "900px"
+                                                   :border-radius "10px"
+                                                   :border "1px solid #BBBBBB"
+                                                   :margin "5px auto"
+                                                  [:div.server :clear "both"
+                                                   :background-color "#EEEEEE"
+                                                   :height "auto"
+                                                   :padding "5px"
+                                                   :max-width "100%"
+                                                   :border-radius "10px"
+                                                   :border "1px solid #999999"
+                                                   :margin "5px auto"
+                                                   [:h4 :font "normal 14px arial"
+                                                    :margin-left "5px"
+                                                    [:a :color "#333333"
+                                                     :text-decoration "none"
+                                                     :font-weight "bold"]
+                                                    [:a:hover :color "#666666"]
+                                                    [:span :margin "3px"
+                                                     :font-size "12px"]
+                                                    [:span.preset :font-style "italic"]
+                                                    [:span.full :text-decoration "line-through"]]
+                                                   [:div.user :background-color "#C5C5C5"
+                                                    :height "64px"
+                                                    :padding "5px"
+                                                    :max-width "200px"
+                                                    :border-radius "10px"
+                                                    :border "1px solid #888888"
+                                                    :margin "5px"
+                                                    :float "left"]
+                                                   [:div.user>* :float "left" :display "block"]
+                                                   [:div.user>a :height "auto"
+                                                    :text-align "center"
+                                                    :padding "20px 0 0 0"
+                                                    :margin "5px"
+                                                    :width "125px"
+                                                    :text-decoration "none"
+                                                    :font-weight "bold"
+                                                    :color "#666666"]
+                                                   [:div.user>a:hover :color "#333333"]]]
+                                                 [:div.clearer :clear "both"])]
+            [:div#servers [:h1 "Play with your fellow GC soldiers"]
+             (->> (vals bl/platoones) bl/get-playing-users
+                  (map (fn [[id s]]
+                         (hash-map :server-id id
+                                   :server-name (->> s :server :server :name)
+                                   :player-numbers (select-keys (->> s :server :server)
+                                                                             [:maxPlayers :numPlayers])
+                                   :server-preset (bl/serverPrests (get-in s [:server :server :preset]))
+                                   :users (->> s :users
+                                               (map #(select-keys (:user %)
+                                                                  [:username :gravatarMd5 :userId ]))))))
+                  (map #(list [:div.server [:h4 (link-to (bl/get-server-url (:server-id %))
+                                                         (:server-name %))
+                                            [:span.info  "("
+                                             ((fn [{:keys [numPlayers maxPlayers]
+                                                   :or [numPlayers 0 maxPlayers 0]}]
+                                                (if (=  maxPlayers numPlayers)
+                                                  [:span.players.full
+                                                   numPlayers "/" maxPlayers ]
+                                                  [:span.players
+                                                   numPlayers "/" maxPlayers ]))
+                                              (:player-numbers %))
+                                                          [:span.preset (:server-preset %)]
+                                             ")"]]
+                               [:div#users
+                                (map (fn [u] [:div.user
+                                             [:img {:src (str "http://gravatar.com/avatar/"
+                                                              (:gravatarMd5 u) "?s=64&d=mm")}]
+                                             [:a {:href
+                                                  (str "http://battlelog.battlefield.com/bf3/user/"
+                                                       (:username u) "/")} (:username u)]])
+                                     (:users %))]
+                               [:div.clearer]])))]))
 
 (defonce server (atom nil))
 
