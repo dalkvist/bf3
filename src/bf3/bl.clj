@@ -13,6 +13,8 @@
 
 (def ^{:dynamic true} *cache-time* (* 2 60 1000))
 
+(def ^{:dynamic true} *short-cache-time* (* 1 60 1000))
+
 (def maps {
            "MP_001" "Grand Bazaar"
            "MP_003" "Teheran Highway"
@@ -35,7 +37,33 @@
                8  "Squad DM"
                32 "Team DM"
                64 "Conquest Large"
-           })
+               })
+
+(def serverPrests {1  "Normal"
+                   2  "Hardcore"
+                   4  "Infantry Only"
+                   8  "Custom"
+               })
+
+(def server-settings {:vnta "Show Enemy Name Tags",
+                      :vtkc "Team Kills Before Kick",
+                      :vhud "Show Hud",
+                      :vaba "Team Balance",
+                      :vshe "Health",
+                      :vnit "Idle Time Before Kick",
+                      :vvsa "Vehicles",
+                      :vbdm "Bullet Damage",
+                      :osls "Only Squad Leader Spawn",
+                      :vmsp "Use Minimap Spotting",
+                      :vpmd "Man Down Time",
+                      :vmin "Show Minimap",
+                      :vtkk "Kicks Before Ban",
+                      :vkca "Kill Cam",
+                      :vrhe "Regenerative Health",
+                      :v3ca "3p Vehicle Cam",
+                      :vprt "Respawn Time",
+                      :v3sp "Use 3d Spotting",
+                      :vffi "Friendly Fire"})
 
 (defn- get-current-iso-8601-date
   "Returns current ISO 8601 compliant date."
@@ -48,8 +76,11 @@
 
 (def players-on-server-url "http://battlelog.battlefield.com/bf3/servers/getPlayersOnServer/")
 
+(defn get-server-url [id]
+  (str "http://battlelog.battlefield.com/bf3/servers/show/" id "/a/"))
+
 (defn- get-server-info [id]
-  (-> (client/get (str "http://battlelog.battlefield.com/bf3/servers/show/" id "/a/")
+  (-> (client/get (get-server-url id)
                   {:headers {"X-AjaxNavigation" "1"}})
       :body (parse-string true) :context))
 
@@ -59,6 +90,8 @@
            :eu          "bc442e68-e072-4151-86da-cdba81c51cf5"
            :na-chicago  "14fb6dc4-1f57-4920-938b-73b0921b9303"
            :na-new-york "2da0845c-463d-4452-93ab-51294898474d"))
+
+(def platoones (hash-map :p1 "2832655391300768492" :p2 "2832655391533545956"))
 
 (defn- get-live-users
   "get user from the battlelog server"
@@ -120,6 +153,30 @@
 (defn save-live-users []
   (doseq [[server id] server-ids]
     (save-bl-user! (get-users id))))
+
+(defn- get-platoon-info [id]
+  (-> (client/get (str "http://battlelog.battlefield.com/bf3/platoon/" id "/listmembers/")
+                  {:headers {"X-AjaxNavigation" "1"}})
+      :body (parse-string true) :context))
+
+(def platoon-info (mem/memo-ttl get-platoon-info *short-cache-time*))
+
+(defn get-playing-users [ids]
+  (let [users (->> ids (mapcat #(->> (platoon-info %)
+                                     :listMembers
+                                     (filter (fn [u] (not (nil? (->> u :user :presence :serverGuid))))))))
+        servers (->> users (map #(->> % :user :presence :serverGuid))
+                     distinct
+                     (map #(server-info %)))]
+    (->> servers (map (fn [s]
+                        (hash-map (->> s :server :guid)
+                                  (hash-map :server s
+                                            :users
+                                            (->> users
+                                                 (filter #( = (get-in s [:server :guid])
+                                                             (get-in % [:user :presence :serverGuid]))))))))
+         (apply merge))))
+
 
 (defn -main [& m]
  (save-live-users))
