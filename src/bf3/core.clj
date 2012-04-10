@@ -145,7 +145,8 @@
                                                     :border-radius "10px"
                                                     :border "1px solid #888888"
                                                     :margin "5px"
-                                                    :float "left"]
+                                                    :float "left"
+                                                    [:img :border-radius "10px"]]
                                                    [:div.user>* :float "left" :display "block"]
                                                    [:div.user>a :height "auto"
                                                     :text-align "center"
