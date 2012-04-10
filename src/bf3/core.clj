@@ -176,7 +176,8 @@
                                    :server-preset (bl/serverPrests (get-in s [:server :server :preset]))
                                    :users (->> s :users
                                                (map #(select-keys (:user %)
-                                                                  [:username :gravatarMd5 :userId ]))))))
+                                                                  [:username :gravatarMd5 :userId ]))
+                                               distinct))))
                   (sort #(compare (count (:users %2)) (count (:users %1))))
                   (map #(list [:div.server [:h4 (link-to (bl/get-server-url (:server-id %))
                                                          (:server-name %))
