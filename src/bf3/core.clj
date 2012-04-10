@@ -176,6 +176,7 @@
                                    :users (->> s :users
                                                (map #(select-keys (:user %)
                                                                   [:username :gravatarMd5 :userId ]))))))
+                  (sort #(compare (count (:users %2)) (count (:users %1))))
                   (map #(list [:div.server [:h4 (link-to (bl/get-server-url (:server-id %))
                                                          (:server-name %))
                                             [:span.info  "("
