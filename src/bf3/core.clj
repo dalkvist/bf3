@@ -115,7 +115,11 @@
                                                    :max-width "900px"
                                                    :border-radius "10px"
                                                    :border "1px solid #BBBBBB"
-                                                   :margin "5px auto"
+                                                  :margin "5px auto"
+                                                  [:small :display "block"
+                                                   [:a :color "#666666"
+                                                     :text-decoration "none"]
+                                                    [:a:hover :color "#333333"]]
                                                   [:div.server :clear "both"
                                                    :background-color "#EEEEEE"
                                                    :height "auto"
@@ -154,6 +158,14 @@
                                                    [:div.user>a:hover :color "#333333"]]]
                                                  [:div.clearer :clear "both"])]
             [:div#servers [:h1 "Play with your fellow GC soldiers"]
+             [:small "Shows players in the GC platoons, "
+              (link-to "http://battlelog.battlefield.com/bf3/platoon/2832655391300768492/" "Platoon 1")
+              " "
+              (link-to "http://battlelog.battlefield.com/bf3/platoon/2832655391533545956/" "Platoon 2")
+              ". "]
+             [:small
+              (link-to "http://www.global-conflict.org/viewtopic.php?f=3&t=16475" "How to sign up for the platoons")]
+             [:small "Inspired by " (link-to "https://stalkdice.ep.io/" "stalk dice")]
              (->> (vals bl/platoones) bl/get-playing-users
                   (map (fn [[id s]]
                          (hash-map :server-id id
