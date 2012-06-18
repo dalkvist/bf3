@@ -104,41 +104,41 @@
                                                     :color "#666666"]
                                                    [:div.user>a:hover :color "#333333"]]]
                                                    [:div.clearer :clear "both"])])
-    content
-    (->> platoones  bl/get-playing-users
-         (map (fn [[id s]]
-                (hash-map :server-id id
-                          :server-name (->> s :server :server :name)
-                          :player-numbers (select-keys (->> s :server :server)
-                                                       [:maxPlayers :numPlayers])
-                          :server-preset (bl/serverPrests (get-in s [:server :server :preset]))
-                          :users (->> s :users
-                                      (map #(select-keys (:user %)
-                                                         [:username :gravatarMd5 :userId ]))
-                                      distinct))))
-         (sort #(compare (count (:users %2)) (count (:users %1))))
-         (map #(list [:div.server [:h4 (link-to (bl/get-server-url (:server-id %))
-                                                (s/escape (:server-name %) {\< \>}))
-                                   [:span.info  "("
-                                    ((fn [{:keys [numPlayers maxPlayers]
-                                          :or [numPlayers 0 maxPlayers 0]}]
-                                       (if (=  maxPlayers numPlayers)
-                                         [:span.players.full
-                                          numPlayers "/" maxPlayers ]
-                                         [:span.players
-                                          numPlayers "/" maxPlayers ]))
-                                     (:player-numbers %))
-                                    [:span.preset (:server-preset %)]
-                                    ")"]]
-                      [:div#users
-                       (map (fn [u] [:div.user
-                                    [:img {:src (str "http://gravatar.com/avatar/"
-                                                     (:gravatarMd5 u) "?s=64&d=mm")}]
-                                    [:a {:href
-                                         (str "http://battlelog.battlefield.com/bf3/user/"
-                                              (:username u) "/")} (:username u)]])
-                            (:users %))]
-                      [:div.clearer]]))))
+    [:div#servers content
+     (->> platoones  bl/get-playing-users
+          (map (fn [[id s]]
+                 (hash-map :server-id id
+                           :server-name (->> s :server :server :name)
+                           :player-numbers (select-keys (->> s :server :server)
+                                                        [:maxPlayers :numPlayers])
+                           :server-preset (bl/serverPrests (get-in s [:server :server :preset]))
+                           :users (->> s :users
+                                       (map #(select-keys (:user %)
+                                                          [:username :gravatarMd5 :userId ]))
+                                       distinct))))
+          (sort #(compare (count (:users %2)) (count (:users %1))))
+          (map #(list [:div.server [:h4 (link-to (bl/get-server-url (:server-id %))
+                                                 (s/escape (:server-name %) {\< \>}))
+                                    [:span.info  "("
+                                     ((fn [{:keys [numPlayers maxPlayers]
+                                           :or [numPlayers 0 maxPlayers 0]}]
+                                        (if (=  maxPlayers numPlayers)
+                                          [:span.players.full
+                                           numPlayers "/" maxPlayers ]
+                                          [:span.players
+                                           numPlayers "/" maxPlayers ]))
+                                      (:player-numbers %))
+                                     [:span.preset (:server-preset %)]
+                                     ")"]]
+                       [:div#users
+                        (map (fn [u] [:div.user
+                                     [:img {:src (str "http://gravatar.com/avatar/"
+                                                      (:gravatarMd5 u) "?s=64&d=mm")}]
+                                     [:a {:href
+                                          (str "http://battlelog.battlefield.com/bf3/user/"
+                                               (:username u) "/")} (:username u)]])
+                             (:users %))]
+                       [:div.clearer]])))])
 
 (defpage  "/" [] (layout "BF3 Stuff"))
 (defpage  "/favicon.ico" [] "")
@@ -205,16 +205,16 @@
 (defpage "/stalking/gc" []
   (stalking-layout
    (vals bl/gc-platoones)
-   [:div#servers [:h1 "Play with your fellow GC soldiers"]
-    [:small "Shows players in the GC platoons, "
-     (link-to "http://battlelog.battlefield.com/bf3/platoon/2832655391300768492/" "Platoon 1")
-     " "
-     (link-to "http://battlelog.battlefield.com/bf3/platoon/2832655391533545956/" "Platoon 2")
-     ". "]
-    [:small
-     (link-to "http://www.global-conflict.org/viewtopic.php?f=3&t=16475" "How to sign up for the platoons")]
-    [:small "Inspired by " (link-to "https://stalkdice.ep.io/" "stalk dice")]
-    ]))
+   [:h1 "Play with your fellow GC soldiers"]
+   [:small "Shows players in the GC platoons, "
+    (link-to "http://battlelog.battlefield.com/bf3/platoon/2832655391300768492/" "Platoon 1")
+    " "
+    (link-to "http://battlelog.battlefield.com/bf3/platoon/2832655391533545956/" "Platoon 2")
+    ". "]
+   [:small
+    (link-to "http://www.global-conflict.org/viewtopic.php?f=3&t=16475" "How to sign up for the platoons")]
+   [:small "Inspired by " (link-to "https://stalkdice.ep.io/" "stalk dice")]
+    ))
 
 (defpage "/stalking/dice" []
   (stalking-layout
