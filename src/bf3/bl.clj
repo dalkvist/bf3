@@ -91,7 +91,9 @@
            :na-chicago  "14fb6dc4-1f57-4920-938b-73b0921b9303"
            :na-new-york "2da0845c-463d-4452-93ab-51294898474d"))
 
-(def platoones (hash-map :p1 "2832655391300768492" :p2 "2832655391533545956"))
+(def gc-platoones (hash-map :p1 "2832655391300768492" :p2 "2832655391533545956"))
+
+(def dice-platoones (hash-map :p1 "2832655391300702826" :p2 "2832655391301004520"))
 
 (defn- get-live-users
   "get user from the battlelog server"
@@ -164,7 +166,8 @@
 (defn get-playing-users [ids]
   (let [users (->> ids (mapcat #(->> (platoon-info %)
                                      :listMembers
-                                     (filter (fn [u] (not (nil? (->> u :user :presence :serverGuid))))))))
+                                     (filter (fn [u] (not (nil? (->> u :user :presence :serverGuid)))))
+                                     )))
         servers (->> users (map #(->> % :user :presence :serverGuid))
                      distinct
                      (map #(server-info %)))]
