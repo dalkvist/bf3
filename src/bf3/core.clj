@@ -146,7 +146,7 @@
 (defpage "/kit" []
   (response/redirect "/kit/"))
 (defpage  "/kit/" [] (kit-wrapper (random-loadout)))
-(defpage  "/kit/:player" [player] (kit-wrapper (random-loadout player)))
+(defpage  "/kit/:player" {player :player} (kit-wrapper (random-loadout player)))
 
 (defpage "/gc" []
   (response/redirect "/gc/"))
