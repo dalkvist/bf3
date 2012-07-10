@@ -10,7 +10,7 @@
 (def player-url "http://api.bf3stats.com/pc/player/")
 
 (def ^{:dynamic true} *underslig-weapons*
-  ["AEK-971" "AK-74M" "AN-94" "F2000" "G3A3" "M16A3" "M16A4" "M416"])
+  ["AEK-971" "AK-74M" "AN-94" "F2000" "G3A3" "M16A3" "M16A4" "M416" ])
 
 (def ^{:dynamic true} *only-avalible?* true)
 (def ^{:dynamic true} *only-main?* true)
@@ -65,12 +65,20 @@
   ;;TODO fix PDW attachments
   (conj attachment
         {:slot
-         (case (:name attachment)
-           ("ACOG (4x)"  "PSO-1 (4x)" "KOBRA (RDS)" "PKA-S (HOLO)" "PKS-07 (7x)" "PK-A (3.4x)" "Ballistic (12x)"
-            "Holographic (HOLO)" "Reflex (RDS)" "IRNV (IR 1x)" "Rifle Scope (6x)" "M145 (3.4x)" "Rifle Scope (8x)") :optical
-            ("Foregrip" "Undersling Rail" "Straight Pull Bolt" "Bipod" "M320 BUCK" "M320 SMOKE") :primary
-            ("Tactical Light" "Laser Sight"  "Flash Supp." "Suppressor" "Extended Mag" "Heavy Barrel"
-              "12G Flechette" "12G Frag" "12G Slug") :secondary)}))
+         (if (->>
+              (s/split (s/lower-case (:name attachment)) #" ")
+              (some (fn [st] (= "camo"  st))))
+           :camo
+           (case (:name attachment)
+             ("ACOG (4x)"  "PSO-1 (4x)" "KOBRA (RDS)" "PKA-S (HOLO)" "PKS-07 (7x)" "PK-A (3.4x)" "Ballistic (12x)"
+              "Holographic (HOLO)" "Reflex (RDS)" "IRNV (IR 1x)" "Rifle Scope (6x)" "M145 (3.4x)" "Rifle Scope (8x)")
+             :optical
+             ("Foregrip" "Undersling Rail" "Straight Pull Bolt" "Bipod" "M320 BUCK" "M320 SMOKE")
+             :primary
+             ("Tactical Light" "Laser Sight"  "Flash Supp." "Suppressor" "Extended Mag" "Heavy Barrel"
+              "12G Flechette" "12G Frag" "12G Slug")
+             :secondary
+             ))}))
 
 (defn attachments
   "returns the attchments for the weapon, only the unlocked ones if *only-avalible?*."
@@ -137,14 +145,14 @@
          (case (:name equipment)
            ("FIM-92 STINGER" "FGM-148 JAVELIN" "SA-18 IGLA" "SMAW" "RPG-7V2" "M320" "M26 MASS"
             "Ammo Box" "Medic kit" "T-UGS" "SOFLAM" "MAV") :gadget1
-           ("DEFIBRILLATOR" "Repair Tool" "EOD BOT" "M15 AT MINE" 
+           ("DEFIBRILLATOR" "Repair Tool" "EOD BOT" "M15 AT MINE"
             "C4 EXPLOSIVES" "M18 CLAYMORE" "M224 MORTAR" "Radio Beacon" ) :gadget2)}))
 
 (defn equipment
   "returns the equipment of the class for the player, only the unlocked ones if *only-avalible?*."
   ([player class]
      (let [c (->> player :stats :kits ((fn [k] (get-class class k))))]
-       (->> c :unlocks 
+       (->> c :unlocks
             (filter #(and (= "kititem" (:type %))
                           (if *only-avalible?*
                             (or (not (:needed %))
