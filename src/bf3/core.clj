@@ -149,8 +149,8 @@
 (defpage "/kit" []
   (response/redirect "/kit/"))
 (defpage  "/kit/" [] (kit-wrapper (random-loadout)))
-(defpage  "/kit/:player" {player :player pdw :pdw shotguns :shotguns}
-  (kit-wrapper (random-loadout player :pdw pdw :shotguns shotguns)))
+(defpage  "/kit/:player" {player :player pdw :pdw shotguns :shotguns kit :class}
+  (kit-wrapper (random-loadout player :pdw pdw :shotguns shotguns :kit kit)))
 
 (defpage "/gc" []
   (response/redirect "/gc/"))

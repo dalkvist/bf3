@@ -189,15 +189,15 @@
                                      (some (set (->> % :category keyword list))
                                            (map keyword cats))))
                         ))]
-    (case (s/lower-case class)
-      "assault" (concat (weapons ["Underslungs"])
+    (case (keyword (s/lower-case (name class)))
+      :assault (concat (weapons ["Underslungs"])
                        [{:type "kititem" :name "Medic kit" :id "medkit"}])
-      "engineer" (concat (weapons ["AT Launchers" "AA Launchers"])
+      :engineer (concat (weapons ["AT Launchers" "AA Launchers"])
                         [{:type "kititem" :name "RPG-7V2" :id "rpg"}
                          {:type "kititem" :name "SMAW" :id "smaw"}
                          {:type "kititem" :name "Repair Tool" :id "repair"}])
-      "support" [{:type "kititem" :name "Ammo Box" :id "ammobox"}]
-      "recon" [{:type "kititem" :name "Radio Beacon" :id "beacon"}])))
+      :support [{:type "kititem" :name "Ammo Box" :id "ammobox"}]
+      :recon [{:type "kititem" :name "Radio Beacon" :id "beacon"}])))
 
 (defn- equipment-slot [equipment]
   "adds information on equipments slot"
@@ -244,10 +244,10 @@
 
 (defn random-loadout
   ([] (binding [*only-avalible?* false] (random-loadout *test-player-info*)))
-  ([player & {:keys [only-avalible pdw shotguns] :or {only-avalible false pdw false shotguns false}}]
+  ([player & {:keys [only-avalible pdw shotguns kit] :or {only-avalible false pdw false shotguns false kit nil}}]
      (binding [*only-avalible?* only-avalible]
        (let [player (if (string? player) (get-player-info player) player)
-             class  (->> player classes shuffle first val :name)
+             class  (or (keyword (s/lower-case (name kit))) (->> player classes shuffle first val :name))
              weapons (->> (class-weapons player class)
                          (concat [] (when pdw (general-weapons player :pdw))
                                     (when shotguns (general-weapons player :shotgun))))
