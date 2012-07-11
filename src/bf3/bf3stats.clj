@@ -244,10 +244,10 @@
 
 (defn random-loadout
   ([] (binding [*only-avalible?* false] (random-loadout *test-player-info*)))
-  ([player & {:keys [only-avalible pdw shotguns kit] :or {only-avalible false pdw false shotguns false kit nil}}]
+  ([player & {:keys [only-avalible pdw shotguns kit] :or {only-avalible false pdw false shotguns false kit false}}]
      (binding [*only-avalible?* only-avalible]
        (let [player (if (string? player) (get-player-info player) player)
-             class  (or (keyword (s/lower-case (name kit))) (->> player classes shuffle first val :name))
+             class  (if kit (keyword (s/lower-case (name kit))) (->> player classes shuffle first val :name))
              weapons (->> (class-weapons player class)
                          (concat [] (when pdw (general-weapons player :pdw))
                                     (when shotguns (general-weapons player :shotgun))))
