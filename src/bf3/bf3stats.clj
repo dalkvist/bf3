@@ -5,7 +5,7 @@
             [clojure.core.memoize :as mem])
   (:use [cheshire.core]))
 
-(declare *test-player-info* *test-weapond*)
+(declare *test-player-info* *test-weapond* attachments)
 
 (def player-url "http://api.bf3stats.com/pc/player/")
 
@@ -29,7 +29,7 @@
 
 (defn- get-class [class kits]
   "returns the class from kits"
-  (get kits (keyword (s/lower-case class))))
+  (get kits (keyword (s/lower-case (name class)))))
 
 (defn classes [player]
     "returns the available kit names for player"
@@ -45,69 +45,130 @@
                      (or (not (:curr %))
                          (>= (:curr %) (:needed % )))))))
 
+(defn- weapon-type [weapon]
+  (case (-> (if (nil? (:category weapon)) (val weapon) weapon)
+            :category (s/split  #" ") last (s/lower-case) (keyword))
+    (:ar) :assault
+    (:c) :carbine
+    (:launchers) :launcher
+    (:lmgclip :lmgbelt) :lmg
+    (:pistols) :pistol
+    (:sg) :shotgun
+    (:smg1 :smg2 :val) :pdw
+    (:srbolt :srsemi) :sniper
+    (:special) :special
+    (:underslungs) :underslong))
+
+(defn- prepare-weapon [weapon]
+  (->> (assoc (if (= (class weapon) clojure.lang.PersistentHashMap)
+                weapon
+                (last weapon))
+         :id (get weapon :id (first weapon))
+         :type (get weapon :type (weapon-type weapon)))
+       ((fn [w] (assoc w :unlocks (attachments w))))))
+
+(defn- get-weapons [player]
+  (->> player :stats :weapons (map prepare-weapon)))
+
 (defn class-weapons
   "returns the weapons of the class for the player, only the unlocked ones if *only-avalible?*."
   ([player class]
      (let [exclude (concat (if *only-weapons?* ["Underslungs" "AT Launchers" "AA Launchers"] [])
-                           (if *only-main?*["Pistols"] []))]
+                           (if *only-main?*["Pistols"] []))
+           class (keyword (s/lower-case class))]
        (->> player
-            :stats :weapons
+            get-weapons
             (filter #(and (if *only-avalible?*
-                            (some (fn [w] (= (key %) (keyword (:id w))))
+                            (some (fn [w] (= (:id %) (keyword (:id w))))
                                   (available-weapon-names player class))
                             true)
-                          (= (s/lower-case class) (-> % val :kit s/lower-case))
-                          (not-any? (set (->> % val :category s/lower-case list))
+                          (= class (-> % :kit s/lower-case keyword))
+                          (not-any? (set (->> % :category s/lower-case list))
                                     (map s/lower-case exclude))))))))
 
-(defn- attachment-slot [attachment]
+(defn- attachment-slot [attachment weapon-type]
   "return the attachment with the equitment slot it belongs to"
-  ;;TODO fix PDW attachments
   (conj attachment
         {:slot
-         (if (->>
-              (s/split (s/lower-case (:name attachment)) #" ")
-              (some (fn [st] (= "camo"  st))))
-           :camo
+         (case weapon-type
+           :pdw
            (case (:name attachment)
-             ("ACOG (4x)"  "PSO-1 (4x)" "KOBRA (RDS)" "PKA-S (HOLO)" "PKS-07 (7x)" "PK-A (3.4x)" "Ballistic (12x)"
-              "Holographic (HOLO)" "Reflex (RDS)" "IRNV (IR 1x)" "Rifle Scope (6x)" "M145 (3.4x)" "Rifle Scope (8x)")
+             ("ACOG (4x)"  "PSO-1 (4x)" "KOBRA (RDS)" "PKA-S (HOLO)" "PKS-07 (7x)" "PK-A (3.4x)"
+              "Ballistic (12x)" "Holographic (HOLO)" "Reflex (RDS)" "IRNV (IR 1x)"
+              "Rifle Scope (6x)" "M145 (3.4x)" "Rifle Scope (8x)" "Iron Sights")
              :optical
-             ("Foregrip" "Undersling Rail" "Straight Pull Bolt" "Bipod" "M320 BUCK" "M320 SMOKE")
+             ("Tactical Light" "Laser Sight")
              :primary
-             ("Tactical Light" "Laser Sight"  "Flash Supp." "Suppressor" "Extended Mag" "Heavy Barrel"
-              "12G Flechette" "12G Frag" "12G Slug")
+             ("Flash Supp." "Suppressor" "Extended Mag" )
              :secondary
-             ))}))
+             )
+           :shotgun
+           (case (:name attachment)
+             ("ACOG (4x)"  "PSO-1 (4x)" "KOBRA (RDS)" "PKA-S (HOLO)" "PKS-07 (7x)" "PK-A (3.4x)"
+              "Ballistic (12x)" "Holographic (HOLO)" "Reflex (RDS)" "IRNV (IR 1x)"
+              "Rifle Scope (6x)" "M145 (3.4x)" "Rifle Scope (8x)" "Iron Sights")
+             :optical
+             ("Tactical Light" "Laser Sight"  "Flash Supp." "Suppressor" "Extended Mag" )
+             :primary
+             ("12G Buckshot" "12G Flechette" "12G Frag" "12G Slug")
+             :secondary
+             )
+           (:assault :carbine :lmg :sniper :special :launcher :pistol :underslong)
+           (if (->>
+                (s/split (s/lower-case (:name attachment)) #" ")
+                (some (fn [st] (= "camo"  st))))
+             :camo
+             (case (:name attachment)
+               ("ACOG (4x)"  "PSO-1 (4x)" "KOBRA (RDS)" "PKA-S (HOLO)" "PKS-07 (7x)" "PK-A (3.4x)"
+                "Ballistic (12x)" "Holographic (HOLO)" "Reflex (RDS)" "IRNV (IR 1x)"
+                "Rifle Scope (6x)" "M145 (3.4x)" "Rifle Scope (8x)" "Iron Sights")
+               :optical
+               ("Foregrip" "Undersling Rail" "Straight Pull Bolt" "Bipod" "M320 BUCK" "M320 SMOKE")
+               :primary
+               ("Tactical Light" "Laser Sight"  "Flash Supp." "Suppressor" "Extended Mag" "Heavy Barrel"
+                "12G Flechette" "12G Frag" "12G Slug")
+               :secondary
+               )))}))
 
 (defn attachments
   "returns the attchments for the weapon, only the unlocked ones if *only-avalible?*."
   ([weapon]
-      (->> weapon val :unlocks
+      (->> weapon :unlocks
            (filter #(if *only-avalible?*
                       (or (not (:needed %))
                           (>= (:curr %) (:needed %)))
                       true))
-           (#(if (some (fn [a] (= a (->> weapon val :name))) *underslig-weapons* )
+           (#(if (some (fn [a] (= a (->> weapon :name))) *underslig-weapons* )
                (conj % {:name "Undersling Rail" :id "undersling"})
                %))
-           (map attachment-slot))))
+           (#(if (= :shotgun (:type weapon))
+               (conj % {:name "12G Buckshot" :id "buck"})
+               %))
+           (#(conj % {:name "Iron Sights" :id "iron"}))
+           (map #(try (attachment-slot % (:type weapon))
+                      (catch Exception ex
+                        (clojure.pprint/pprint (str "ex: " ex
+                                                    " weapon: "  (map :name weapon)
+                                                    " attachment: " %))))))))
 
 (defn- random-attachments [weapon]
   "returns a random attachment for each attachment slot"
   (->> weapon attachments (sort-by :slot) (partition-by :slot)
        (map #(->> % shuffle first))))
 
+(defn- general-weapons [player type]
+  (->> (binding [*only-main?* false] (class-weapons player "general"))
+       (filter #(and (if *only-avalible?*
+                       (some (fn [w] (= (:id %) (keyword (:id w))))
+                             (available-weapon-names player "general"))
+                       true)
+                     (= type (:type %))))
+       (map prepare-weapon)))
+
 (defn pistols
     "returns the pistols for the player, only the unlocked ones if *only-avalible?*."
   ([player]
-      (->> (binding [*only-main?* false] (class-weapons player "general"))
-           (filter #(and (if *only-avalible?*
-                           (some (fn [w] (= (key %) (keyword (:id w))))
-                                 (available-weapon-names player "general"))
-                           true)
-                         (= (s/lower-case "pistols")
-                            (-> % val :category  s/lower-case)))))))
+     (general-weapons player :pistol)))
 
 ;;stars
 (comment
@@ -120,14 +181,14 @@
   "returns the additional equitment for the class (starting equitment and mislabeled weapons)"
   (let [player *test-player-info*
         weapons (fn [cats]
-                  (->> player :stats :weapons
+                  (->> player get-weapons
                        (filter #(and (if *only-avalible?*
-                                       (some (fn [w] (= (key %) (keyword (:id w))))
+                                       (some (fn [w] (= (:id %) (keyword (:id w))))
                                              (available-weapon-names player class))
                                        true)
-                                     (some (set (->> % val :category keyword list))
+                                     (some (set (->> % :category keyword list))
                                            (map keyword cats))))
-                        (map  val)))]
+                        ))]
     (case (s/lower-case class)
       "assault" (concat (weapons ["Underslungs"])
                        [{:type "kititem" :name "Medic kit" :id "medkit"}])
@@ -183,20 +244,26 @@
 
 (defn random-loadout
   ([] (binding [*only-avalible?* false] (random-loadout *test-player-info*)))
-  ([player] (let [player (if (string? player) (get-player-info player) player)
-                  class (->> player classes shuffle first val :name)
-                  weapon (->> (class-weapons player class) shuffle first)
-                  attachments (->> (random-attachments weapon) (map :name))]
-              (hash-map :class class
-                        :weapon {:name (->> weapon val :name)
-                                 :attachments attachments}
-                        :sidearm (->> (pistols player) shuffle first val :name)
-                        :equipment (->> (random-equipment player class) (map :name))
-                        :specialization (->> player specializations shuffle first val :name)))))
+  ([player & {:keys [only-avalible pdw shotguns] :or {only-avalible false pdw false shotguns false}}]
+     (binding [*only-avalible?* only-avalible]
+       (let [player (if (string? player) (get-player-info player) player)
+             class  (->> player classes shuffle first val :name)
+             weapons (->> (class-weapons player class)
+                         (concat [] (when pdw (general-weapons player :pdw))
+                                    (when shotguns (general-weapons player :shotgun))))
+             weapon (->> weapons shuffle first)
+             attachments (->> (random-attachments weapon) (map :name))]
+         (hash-map :class class
+                   :weapon {:name (->> weapon :name)
+                            :attachments attachments}
+                   :sidearm (->> (pistols player) shuffle first :name)
+                   :equipment (->> (random-equipment player class) (map :name))
+                   :specialization (->> player specializations shuffle first val :name))))))
 
 
 (def ^{:dynamic true } *test-player-info*
                 (get-player-info "cairdazar"))
 
-(def ^{:dynamic true} *test-weapond*
-  (->> (class-weapons *test-player-info* "assault") first))
+(comment
+  (def ^{:dynamic true} *test-weapond*
+    (->> (class-weapons *test-player-info* "assault") first)))

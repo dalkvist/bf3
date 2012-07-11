@@ -37,16 +37,19 @@
     [:p "use bf3.herokuapp.com for random loadout with all unlocks, inc all attachments"]
     [:p "or use bf3.herokuapp.com/YOURSOLDIER "
      "for a loadout with only the stuff you have unlocked"]
+    [:p "use bf3.herokuapp.com/YOURSOLDIER?pdw=true&shotguns=true"
+     "if you whant to use pdw and/or shoutguns"]
     [:p "you need to manually call an update on bf3stats.com"]]
    [:div#content content]
    [:div#todo [:b "todo"]
     (unordered-list ["design ;)"
-                     "fix attachments on PDWs (some have attachments on diferent slots then the main weapons)"
+                     [:div {:style "text-decoration: line-through;"}
+                      "fix attachments on PDWs (some have attachments on diferent slots then the main weapons)"]
                      "vehicles" "configuration:"
                      (unordered-list ["classes"
                                       "prefere weapons/classes without 1/5 service star(s)"
                                       "prefere weapons with unlocked attachments"
-                                      "PWDs"])
+                                      [:div {:style "text-decoration: line-through;"} "PWDs"]])
 
                      "add update call to bf3stats"
                      "squad loadouts"])]
@@ -146,7 +149,8 @@
 (defpage "/kit" []
   (response/redirect "/kit/"))
 (defpage  "/kit/" [] (kit-wrapper (random-loadout)))
-(defpage  "/kit/:player" {player :player} (kit-wrapper (random-loadout player)))
+(defpage  "/kit/:player" {player :player pdw :pdw shotguns :shotguns}
+  (kit-wrapper (random-loadout player :pdw pdw :shotguns shotguns)))
 
 (defpage "/gc" []
   (response/redirect "/gc/"))
