@@ -208,7 +208,7 @@
 
 (defpage "/stalking/gc" []
   (stalking-layout
-   (vals bl/gc-platoones)
+   (vals (merge bl/gc-platoones  bl/gc-pride))
    [:h1 "Play with your fellow GC soldiers"]
    [:small "Shows players in the GC platoons, "
     (link-to "http://battlelog.battlefield.com/bf3/platoon/2832655391300768492/" "Platoon 1")
@@ -219,6 +219,21 @@
     (link-to "http://www.global-conflict.org/viewtopic.php?f=3&t=16475" "How to sign up for the platoons")]
    [:small "Inspired by " (link-to "https://stalkdice.ep.io/" "stalk dice")]
     ))
+
+(defpage "/stalking/gc/pride" []
+  (stalking-layout
+   (vals bl/gc-pride)
+   [:h1 "Play with your fellow GC soldiers"]
+   [:small "Shows players in the GC platoons, "
+    (link-to "http://battlelog.battlefield.com/bf3/platoon/2832655391300768492/" "Platoon 1")
+    " "
+    (link-to "http://battlelog.battlefield.com/bf3/platoon/2832655391533545956/" "Platoon 2")
+    ". "]
+   [:small
+    (link-to "http://www.global-conflict.org/viewtopic.php?f=3&t=16475" "How to sign up for the platoons")]
+   [:small "Inspired by " (link-to "https://stalkdice.ep.io/" "stalk dice")]
+    ))
+
 
 (defpage "/stalking/dice" []
   (stalking-layout

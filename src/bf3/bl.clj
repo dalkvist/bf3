@@ -95,6 +95,8 @@
 
 (def dice-platoones (hash-map :p1 "2832655391300702826" :p2 "2832655391301004520"))
 
+(def gc-pride (hash-map :p1 "2832655391698814149"))
+
 (defn- get-live-users
   "get user from the battlelog server"
   ([] (get-live-users (->> server-ids vals first)))
