@@ -31,12 +31,19 @@
            "XP1_004" "Wake Island"
            })
 
-(def mapModes {1  "Conquest"
-               2  "Rush"
-               4  "Squad Rush"
-               8  "Squad DM"
-               32 "Team DM"
-               64 "Conquest Large"
+(def mapModes {
+               1 "CONQUEST"
+               128 "CONQUESTASSAULTLARGE"
+               256 "CONQUESTASSAULTSMALL"
+               64 "CONQUESTLARGE"
+               1024 "DOMINATION"
+               512 "GUNMASTER"
+               16 "ONSLAUGHT"
+               2 "RUSH"
+               8 "SQDM"
+               4 "SQRUSH"
+               32 "TEAMDEATHMATCH"
+               2048 "TEAMDEATHMATCHC"
                })
 
 (def serverPrests {1  "Normal"
