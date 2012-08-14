@@ -8,7 +8,7 @@
         [bf3.bl :only [get-username get-user]])
   (:import java.net.URL))
 
-
+(def ^{:dynamic true} *cache-time* (* 2 60 1000))
 
 (defn- get-battle-info [battle]
   (merge (select-keys (first battle) [:server])
@@ -30,3 +30,5 @@
        (mapcat (fn [x] (partition-by #(select-keys % [:info :gameId]) x)))
        (pmap get-battle-info)
        ))
+
+(def battle-info (mem/memo-ttl get-battle-infos *cache-time*))
