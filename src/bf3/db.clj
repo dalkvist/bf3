@@ -12,7 +12,7 @@
   "Checks if connection and collection exist, otherwise initialize."
   (when (not (connection? *mongo-config*)) ;; If global connection doesn't exist yet.
     (let [mongo-url (or (get (System/getenv) "MONGOLAB_URI")            ;; Heroku puts it here.
-                        "mongodb://user:pass@localhost:27017/bf3") ;; if not use localhost
+                        "mongodb://user:pass@127.0.0.1:27017/bf3") ;; if not use localhost
           config    (split-mongo-url mongo-url)] ;; Extract options.
       (println "Initializing mongo @ " mongo-url)
       (mongo! :db (:db config) :host (:host config) :port (Integer. (:port config))) ;; Setup global mongo.
