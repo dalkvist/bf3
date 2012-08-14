@@ -19,8 +19,14 @@
             [gaka [core :as gaka]]
             [bf3.ts :as ts]
             [bf3.bl :as bl]
+            [clj-http.client :as client]
+            [clojure.core.memoize :as mem]
             [clj-time.core :as time]
             [clj-time.format :as time-format]))
+
+
+(def ^{:dynamic true} *short-cache-time* (* 1 60 1000))
+
 
 (defpartial layout [ & content]
   (html5
@@ -194,8 +200,13 @@
                                                           (map #(:origin-name %) )
                                                           (interpose "<br/>"))))))))))))
 
+(defn- get-battles []
+  (->> (client/get "http://work.dalkvist.se:8081/gc/battles/") :body))
+
+(def battles (mem/memo-ttl get-battles *short-cache-time*))
+
 (defpage "/gc/battles" []
-  (response/redirect "/gc/battles/"))
+  (html5 (battles)))
 
 (defpage "/gc/battles/" []
   (layout (into [:ul#battles]
