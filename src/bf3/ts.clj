@@ -19,7 +19,7 @@
        (.getZone current-date-time))
      current-date-time)))
 
-(def ts-url "http://www.tsviewer.com/index.php?page=ts_viewer&ID=917390")
+(def ts-url "http://www.tsviewer.com/index.php?page=ts_viewer&ID=995941")
 
 (def ^{:dynamic true} *cache-time* (* 2 60 1000))
 
