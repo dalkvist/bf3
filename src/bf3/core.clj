@@ -8,6 +8,7 @@
         [bf3.db :only [get-ts-users get-bl-users]]
         [bf3.stats :only [get-stats battleday-roster get-battleday]]
         [bf3.ki :only [ki-players get-ta-info get-ki-info]]
+        [bf3.info :only [battle-info]]
         [cheshire.core :only [encode generate-string]])
   (:require (compojure [route :as route])
             (ring.util [response :as response])
@@ -17,7 +18,9 @@
             [clojure.string :as s]
             [gaka [core :as gaka]]
             [bf3.ts :as ts]
-            [bf3.bl :as bl]))
+            [bf3.bl :as bl]
+            [clj-time.core :as time]
+            [clj-time.format :as time-format]))
 
 (defpartial layout [ & content]
   (html5
@@ -190,6 +193,34 @@
                                                      (->> army
                                                           (map #(:origin-name %) )
                                                           (interpose "<br/>"))))))))))))
+
+(defpage "/gc/battles" []
+  (response/redirect "/gc/battles/"))
+
+(defpage "/gc/battles/" []
+  (layout (into [:ul#battles]
+                (for [battle (battle-info)]
+                  [:li.battle
+                   [:div.info
+                    [:div (->> (:server battle) bl/server-info :server :name)]
+                    [:div.map [:span.name (bl/maps (:map battle))]
+                     [:span.mode (bl/mapModes (:mapMode battle))]
+                     [:span.variant (:mapVariant battle)]]
+                    [:div.time [:span.start [:span "start: "] (:start battle)]
+                     [:span.end [:span "end: "] (:end battle)]
+                     ;;TODO add relative to SBT
+                     [:span.duration [:span "duration: "]
+                      "~"
+                      (->> (time/interval (clj-time.format/parse (:start battle))
+                                          (clj-time.format/parse (:end battle)))
+                           (time/in-minutes) )" min"]]]
+                   [:ul.users
+                    (for [user (->> (:users battle) (sort-by :clanTag))]
+                      [:li.user (str (when-not (empty? (:clanTag user))
+                                       (str "[" (:clanTag user) "]"))
+                                     (:personaName user))])]
+
+                    ]))))
 
 (defpage  "/gc/update" [] (layout (do (bl/save-live-users)
                                   (ts/save-live-users))))
