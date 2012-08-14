@@ -32,18 +32,18 @@
            })
 
 (def mapModes {
-               1 "CONQUEST"
-               128 "CONQUESTASSAULTLARGE"
-               256 "CONQUESTASSAULTSMALL"
-               64 "CONQUESTLARGE"
-               1024 "DOMINATION"
-               512 "GUNMASTER"
-               16 "ONSLAUGHT"
-               2 "RUSH"
-               8 "SQDM"
-               4 "SQRUSH"
-               32 "TEAMDEATHMATCH"
-               2048 "TEAMDEATHMATCHC"
+               1 "Conquest"
+               128 "Conquest Assault Large"
+               256 "Conquest Assault Small"
+               64 "Conquest Large"
+               1024 "Domination"
+               512 "Gun Master"
+               16 "Onslaught"
+               2 "Rush"
+               8 "Squad DM"
+               4 "Squad Rush"
+               32 "Team DM"
+               2048 "Team DM CQ"
                })
 
 (def serverPrests {1  "Normal"
