@@ -107,12 +107,14 @@
   "get user from the battlelog server"
   ([] (get-live-users (->> server-ids vals first)))
   ([id]
-     (hash-map :time (get-current-iso-8601-date)
-               :users (->>  id server-info :players
-                            (map #(-> % :persona :personaId)))
-               :server id
-               :info (-> id (server-info) :server
-                         (select-keys  [:hasPassword :gameId :map :mapMode])))))
+     (let [info (server-info id)]
+                 (hash-map :time (get-current-iso-8601-date)
+                    :users (->> info :players
+                                (map #(-> % :persona :personaId)))
+                    :server id
+                    :info
+                    (merge (hash-map :vehicles (= 1 (get-in info [ :server :settings :vvsa])))
+                           (select-keys (:server info) [:hasPassword :gameId :map :mapMode :mapVariant]))))))
 
 (def get-users (mem/memo-ttl get-live-users *cache-time*))
 
