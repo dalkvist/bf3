@@ -209,29 +209,31 @@
   (html5 (battles)))
 
 (defpage "/gc/battles/" []
-  (layout (into [:ul#battles]
-                (for [battle (battle-info)]
-                  [:li.battle
-                   [:div.info
-                    [:div (->> (:server battle) bl/server-info :server :name)]
-                    [:div.map [:span.name (bl/maps (:map battle))]
-                     [:span.mode (bl/mapModes (:mapMode battle))]
-                     [:span.variant (:mapVariant battle)]]
-                    [:div.time [:span.start [:span "start: "] (:start battle)]
-                     [:span.end [:span "end: "] (:end battle)]
-                     ;;TODO add relative to SBT
-                     [:span.duration [:span "duration: "]
-                      "~"
-                      (->> (time/interval (clj-time.format/parse (:start battle))
-                                          (clj-time.format/parse (:end battle)))
-                           (time/in-minutes) )" min"]]]
-                   [:ul.users
-                    (for [user (->> (:users battle) (sort-by :clanTag))]
-                      [:li.user (str (when-not (empty? (:clanTag user))
-                                       (str "[" (:clanTag user) "]"))
-                                     (:personaName user))])]
+  (layout (into [:div#battles]
+                (for [btls (partition-by :server (battle-info))]
+                  (into [:ul.battles]
+                        (for [battle btls]
+                          [:li.battle
+                           [:div.info
+                            [:div (->> (:server battle) bl/server-info :server :name)]
+                            [:div.map [:span.name (bl/maps (:map battle))]
+                             [:span.mode (bl/mapModes (:mapMode battle))]
+                             [:span.variant (:mapVariant battle)]]
+                            [:div.time [:span.start [:span "start: "] (:start battle)]
+                             [:span.end [:span "end: "] (:end battle)]
+                             ;;TODO add relative to SBT
+                             [:span.duration [:span "duration: "]
+                              "~"
+                              (->> (time/interval (clj-time.format/parse (:start battle))
+                                                  (clj-time.format/parse (:end battle)))
+                                   (time/in-minutes) )" min"]]]
+                           [:ul.users
+                            (for [user (->> (:users battle) (sort-by :clanTag))]
+                              [:li.user (str (when-not (empty? (:clanTag user))
+                                               (str "[" (:clanTag user) "]"))
+                                             (:personaName user))])]
 
-                    ]))))
+                           ]))))))
 
 (defpage  "/gc/update" [] (layout (do (bl/save-live-users)
                                   (ts/save-live-users))))
