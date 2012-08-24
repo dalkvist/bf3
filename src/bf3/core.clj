@@ -208,8 +208,14 @@
 (defpage "/gc/battles" []
   (html5 (battles)))
 
+(defn get-time-string [t]
+  (->> (clj-time.format/parse t)
+       (clj-time.format/unparse (clj-time.format/formatters :date-hour-minute))))
+
 (defpage "/gc/battles/" []
-  (layout (into [:div#battles]
+  (layout [:style {:type "text/css"} (gaka/css [:.battles :float "left"
+                                                [:span :margin "0 1px"]] )]
+          (into [:div#battles]
                 (for [btls (partition-by :server (battle-info))]
                   (into [:ul.battles]
                         (for [battle btls]
@@ -218,9 +224,10 @@
                             [:div (->> (:server battle) bl/server-info :server :name)]
                             [:div.map [:span.name (bl/maps (:map battle))]
                              [:span.mode (bl/mapModes (:mapMode battle))]
-                             [:span.variant (:mapVariant battle)]]
-                            [:div.time [:span.start [:span "start: "] (:start battle)]
-                             [:span.end [:span "end: "] (:end battle)]
+                             [:span.variant (cond (= 1 (:mapVariant battle)) "Tiny (16 player)"
+                                                  true "")]]
+                            [:div.time [:span.start [:span "start: "] (get-time-string (:start battle)) " utc"]
+                             [:span.end [:span "end: "] (get-time-string (:end battle)) " utc"]
                              ;;TODO add relative to SBT
                              [:span.duration [:span "duration: "]
                               "~"
