@@ -22,7 +22,8 @@
             [clj-http.client :as client]
             [clojure.core.memoize :as mem]
             [clj-time.core :as time]
-            [clj-time.format :as time-format]))
+            [clj-time.format :as time-format]
+            [clj-time.coerce :as time-cc]))
 
 
 (def ^{:dynamic true} *short-cache-time* (* 1 60 1000))
@@ -212,13 +213,30 @@
   (->> (clj-time.format/parse t)
        (clj-time.format/unparse (clj-time.format/formatters :date-hour-minute))))
 
+(defn get-interval-string [i]
+  (-> i
+      (.toPeriod (org.joda.time.PeriodType/yearWeekDayTime))
+      (#(let [y (.getYears   %)
+              w (.getWeeks   %)
+              d (.getDays    %)
+              h (.getHours   %)
+              m (.getMinutes %)]
+          (str
+           (when (> y 0) (str y " Years"))
+           (when (> w 0) (str " " w " weeks"))
+           (when (> d 0) (str " " d " days"))
+           (when (> h 0) (str " " h " hours"))
+           (when (> m 0) (str " " m " minutes" )))))
+      (s/trim)))
+
 (defpage "/gc/battles/" []
   (layout [:style {:type "text/css"} (gaka/css [:.battles :float "left"
-                                                [:span :margin "0 1px"]] )]
+                                                [:span :margin "0 1px"]
+                                                [:.duration :display "block"]] )]
           (into [:div#battles]
                 (for [btls (partition-by :server (battle-info))]
                   (into [:ul.battles]
-                        (for [battle btls]
+                        (for [battle (reverse btls)]
                           [:li.battle
                            [:div.info
                             [:div (->> (:server battle) bl/server-info :server :name)]
@@ -230,10 +248,9 @@
                              [:span.end [:span "end: "] (get-time-string (:end battle)) " utc"]
                              ;;TODO add relative to SBT
                              [:span.duration [:span "duration: "]
-                              "~"
                               (->> (time/interval (clj-time.format/parse (:start battle))
                                                   (clj-time.format/parse (:end battle)))
-                                   (time/in-minutes) )" min"]]]
+                                   get-interval-string)]]]
                            [:ul.users
                             (for [user (->> (:users battle) (sort-by :clanTag))]
                               [:li.user (str (when-not (empty? (:clanTag user))
