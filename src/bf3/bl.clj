@@ -29,6 +29,14 @@
            "XP1_002" "Gulf of Oman"
            "XP1_003" "Sharqi Peninsula"
            "XP1_004" "Wake Island"
+           "maps-XP2_Factory" "Scrapmetal"
+           "XP2_Office" "Operation 925"
+           "XP2_Palace" "Donya Fortress"
+           "XP2_Skybar" "Ziba Tower"
+           "XP3_Alborz" "Alborz Mountains"
+           "XP3_Desert" "Bandar Desert"
+           "XP3_Shield" "Armored Shield"
+           "XP3_Valley" "Death Valley"
            })
 
 (def mapModes {
@@ -44,6 +52,7 @@
                4 "Squad Rush"
                32 "Team DM"
                2048 "Team DM CQ"
+               131072 "Tank Superiority"
                })
 
 (def serverPrests {1  "Normal"
