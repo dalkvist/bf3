@@ -282,6 +282,8 @@
     (link-to "http://battlelog.battlefield.com/bf3/platoon/2832655391300768492/" "Platoon 1")
     " "
     (link-to "http://battlelog.battlefield.com/bf3/platoon/2832655391533545956/" "Platoon 2")
+    " "
+    (link-to "http://battlelog.battlefield.com/bf3/platoon/2832655391785121883/" "Platoon 3")
     ". "]
    [:small
     (link-to "http://www.global-conflict.org/viewtopic.php?f=3&t=16475" "How to sign up for the platoons")]
