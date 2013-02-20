@@ -37,6 +37,10 @@
            "XP3_Desert" "Bandar Desert"
            "XP3_Shield" "Armored Shield"
            "XP3_Valley" "Death Valley"
+           "maps-XP4_FD" "Markaz Monolith"
+           "maps-XP4_Parl" "Azadi Palace"
+           "maps-XP4_Quake" "Epicenter"
+           "maps-XP4_Rubble" "Talah Market"
            })
 
 (def mapModes {
@@ -53,6 +57,7 @@
                32 "Team DM"
                2048 "Team DM CQ"
                131072 "Tank Superiority"
+               4194304 "Scavenger"
                })
 
 (def serverPrests {1  "Normal"
