@@ -37,10 +37,12 @@
   (maybe-init)
   (insert! :ts-users ts-user))
 
-(defn get-bl-users []
-  (maybe-init)
-  (map clean-users
-       (fetch :bl-users)))
+(defn get-bl-users
+  ([] (get-bl-users 150000))
+  ([skip]
+     (maybe-init)
+     (map clean-users
+          (fetch :bl-users :skip skip))))
 
 (defn save-bl-user! [bl-user]
   (maybe-init)

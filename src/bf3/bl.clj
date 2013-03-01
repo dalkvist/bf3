@@ -124,7 +124,7 @@
      (let [info (server-info id)]
                  (hash-map :time (get-current-iso-8601-date)
                     :users (->> info :players
-                                (map #(-> % :persona :personaId)))
+                                (mapcat #(->> % :persona :userId get-user)))
                     :server id
                     :info
                     (merge (hash-map :vehicles (= 1 (get-in info [ :server :settings :vvsa])))

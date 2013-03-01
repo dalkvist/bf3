@@ -15,7 +15,9 @@
                (:info   (first battle))
                (hash-map :users (->> (mapcat :users battle)
                                      distinct
-                                     (pmap #(->> % get-username get-user))
+                                     (map #(if (string? %)
+                                             (->> % get-username get-user)
+                                             (flatten %)))
                                      (apply concat))
                          :start (->> (sort-by :time battle)
                                      first :time)
