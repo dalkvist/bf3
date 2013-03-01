@@ -10,6 +10,7 @@
         [bf3.db])
   (:import java.net.URL))
 
+(declare get-user)
 
 (def ^{:dynamic true} *cache-time* (* 2 60 1000))
 
