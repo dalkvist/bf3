@@ -38,10 +38,14 @@
            "XP3_Desert" "Bandar Desert"
            "XP3_Shield" "Armored Shield"
            "XP3_Valley" "Death Valley"
-           "maps-XP4_FD" "Markaz Monolith"
-           "maps-XP4_Parl" "Azadi Palace"
-           "maps-XP4_Quake" "Epicenter"
-           "maps-XP4_Rubble" "Talah Market"
+           "XP4_FD" "Markaz Monolith"
+           "XP4_Parl" "Azadi Palace"
+           "XP4_Quake" "Epicenter"
+           "XP4_Rubble" "Talah Market"
+           "XP5_001" "Operation Riverside"
+           "XP5_002" "Nebandan Flats"
+           "XP5_003" "Kiasar Railroad"
+           "XP5_004" "Sabalan Pipeline"
            })
 
 (def mapModes {
