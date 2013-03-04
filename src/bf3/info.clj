@@ -17,8 +17,13 @@
                                      distinct
                                      (map #(if (string? %)
                                              (->> % get-username get-user)
-                                             (flatten %)))
-                                     (apply concat))
+                                             (if-not (vector? %)
+                                               [%]
+                                               %)))
+                                     (apply concat)
+                                     (sort-by :userId)
+                                     (partition-by :userId)
+                                     (map first))
                          :start (->> (sort-by :time battle)
                                      first :time)
                          :end (->> (sort-by :time battle)
