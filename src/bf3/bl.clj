@@ -63,6 +63,8 @@
                2048 "Team DM CQ"
                131072 "Tank Superiority"
                4194304 "Scavenger"
+               524288 "Capture the Flag"
+               8388608 "Air Superiority"
                })
 
 (def serverPrests {1  "Normal"
