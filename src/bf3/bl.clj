@@ -135,7 +135,8 @@
                     :server id
                     :info
                     (merge (hash-map :vehicles (= 1 (get-in info [ :server :settings :vvsa])))
-                           (select-keys (:server info) [:hasPassword :gameId :map :mapMode :mapVariant]))))))
+                           (select-keys (:server info) [:hasPassword :gameId :map :mapMode :mapVariant
+                                                        :name :matchId]))))))
 
 (def get-users (mem/memo-ttl get-live-users *cache-time*))
 

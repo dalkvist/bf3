@@ -239,7 +239,9 @@
                         (for [battle (reverse btls)]
                           [:li.battle
                            [:div.info
-                            [:div (->> (:server battle) bl/server-info :server :name)]
+                            [:div (if-let [name (->> battle :server :info :name)]
+                                    name
+                                    (->> (:server battle) bl/server-info :server :name))]
                             [:div.map [:span.name (bl/maps (:map battle))]
                              [:span.mode (bl/mapModes (:mapMode battle))]
                              [:span.variant (cond (= 1 (:mapVariant battle)) "Tiny (16 player)"
