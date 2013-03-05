@@ -17,9 +17,9 @@
                                      distinct
                                      (map #(if (string? %)
                                              (->> % get-username get-user)
-                                             (if-not (vector? %)
-                                               [%]
-                                               %)))
+                                             (if (vector? %)
+                                               (flatten %)
+                                               [%])))
                                      (apply concat)
                                      (sort-by :userId)
                                      (partition-by :userId)
