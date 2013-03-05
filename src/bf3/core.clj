@@ -254,7 +254,9 @@
                                                   (clj-time.format/parse (:end battle)))
                                    get-interval-string)]]]
                            [:ul.users
-                            (for [user (->> (:users battle) (sort-by :clanTag))]
+                            (for [user (->> (:users battle) (sort-by :clanTag)
+                                            (partition-by :clanTag)
+                                            (mapcat #(sort-by :personaName %)))]
                               [:li.user (str (when-not (empty? (:clanTag user))
                                                (str "[" (:clanTag user) "]"))
                                              (:personaName user))])]
