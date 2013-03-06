@@ -227,7 +227,10 @@
            (when (> d 0) (str " " d " days"))
            (when (> h 0) (str " " h " hours"))
            (when (> m 0) (str " " m " minutes" )))))
-      (s/trim)))
+      (s/trim)
+      (#(if (empty? %)
+          "~2 minutes"
+          %))))
 
 (defpage "/gc/battles/" []
   (layout [:style {:type "text/css"} (gaka/css [:.battles :float "left"
