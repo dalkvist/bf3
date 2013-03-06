@@ -245,7 +245,9 @@
                             [:div (if-let [name (->> battle :server :info :name)]
                                     name
                                     (->> (:server battle) bl/server-info :server :name))]
-                            [:div.map [:span.name (bl/maps (:map battle))]
+                            [:div.map [:img {:src (str "http://battlelog-cdn.battlefield.com/cdnprefix/9aa162d40ad4/public/base/bf3/map_images/30x21/"
+                                                       (s/lower-case (:map battle)) ".jpg")}]
+                             [:span.name (bl/maps (:map battle))]
                              [:span.mode (bl/mapModes (:mapMode battle))]
                              [:span.variant (cond (= 1 (:mapVariant battle)) "Tiny (16 player)"
                                                   true "")]]
