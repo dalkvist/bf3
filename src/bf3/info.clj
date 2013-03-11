@@ -5,7 +5,7 @@
             [clj-time.core :as time]
             [clj-time.format :as time-format])
   (:use [bf3.db]
-        [bf3.bl :only [get-username get-user]])
+        [bf3.bl :only [get-username get-user get-user-expansions]])
   (:import java.net.URL))
 
 (def ^{:dynamic true} *cache-time* (* 2 60 1000))
@@ -23,7 +23,10 @@
                                      (apply concat)
                                      (sort-by :userId)
                                      (partition-by :userId)
-                                     (map first))
+                                     (map first)
+                                     (map #(if (nil? (:expansions %))
+                                             (assoc % :expansions (get-user-expansions :personaName))
+                                             %)))
                          :start (->> (sort-by :time battle)
                                      first :time)
                          :end (->> (sort-by :time battle)

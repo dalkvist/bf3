@@ -14,6 +14,8 @@
 
 (def ^{:dynamic true} *cache-time* (* 2 60 1000))
 
+(def ^{:dynamic true} *long-cache-time* (* 24 60 60 1000))
+
 (def ^{:dynamic true} *short-cache-time* (* 1 60 1000))
 
 (def maps {
@@ -93,6 +95,13 @@
                       :v3sp "Use 3d Spotting",
                       :vffi "Friendly Fire"})
 
+(def expansions {:1024  "Premium",
+                 :512   "Back to Karkand",
+                 :2048  "Close Quarters",
+                 :4096  "Armored Kill",
+                 :8192  "Aftermath"
+                 :16384 "End Game"})
+
 (defn- get-current-iso-8601-date
   "Returns current ISO 8601 compliant date."
   []
@@ -131,7 +140,9 @@
      (let [info (server-info id)]
                  (hash-map :time (get-current-iso-8601-date)
                     :users (->> info :players
-                                (mapcat #(->> % :persona :userId get-user)))
+                                (mapcat #(->> % :persona :userId get-user
+                                              (merge {:expansions (get-user-expansions
+                                                                   (->> % :persona :username))}))))
                     :server id
                     :info
                     (merge (hash-map :vehicles (= 1 (get-in info [ :server :settings :vvsa])))
@@ -183,6 +194,29 @@
        (map #(select-keys % [:userId :personaId :clanTag :personaName]))))
 
 (def get-user (mem/memo-ttl get-user-info *cache-time*))
+
+(defn- user-expansions [name]
+  (filter #(not (nil? (expansions %)))
+          (map #(key %) (-> (client/get (str "http://battlelog.battlefield.com/bf3/user/" name "/")
+                                        {:headers {"X-AjaxNavigation" "1"}})
+                            :body (parse-string true)
+                            :context
+                            :userGameExpansions
+                            ))))
+
+(def get-user-expansions (mem/memo-ttl user-expansions *long-cache-time*))
+
+(defn get-expansion-img [ids only-premium?]
+  (map #(vector :img
+                 {:src (str "http://battlelog-cdn.battlefield.com/public/common/tags/expansion/"
+                            (->> % str (drop 1) (reduce str))
+                            ".gif")
+                  :alt (expansions %)})
+       (let [p (filter #(= % :1024) ids)]
+         (if (and only-premium? (not-empty p))
+           p
+           ids))))
+
 
 (defn save-live-users []
   (doseq [[server id] server-ids]

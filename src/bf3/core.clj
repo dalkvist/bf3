@@ -235,6 +235,11 @@
 (defpage "/gc/battles/" []
   (layout [:style {:type "text/css"} (gaka/css [:.battles :float "left"
                                                 [:span :margin "0 1px"]
+                                                [:.user
+                                                 [:.name
+                                                         :width "210px"
+                                                         :display "inline-block"]
+                                                 [:.expansions :display "none"]]
                                                 [:.duration :display "block"]] )]
           (into [:div#battles]
                 (for [btls (partition-by :server (battle-info))]
@@ -262,9 +267,10 @@
                             (for [user (->> (:users battle) (sort-by :clanTag)
                                             (partition-by :clanTag)
                                             (mapcat #(sort-by :personaName %)))]
-                              [:li.user (str (when-not (empty? (:clanTag user))
-                                               (str "[" (:clanTag user) "]"))
-                                             (:personaName user))])]
+                              [:li.user [:span.name (str (when-not (empty? (:clanTag user))
+                                                           (str "[" (:clanTag user) "]"))
+                                                         (:personaName user))]
+                               [:span.expansions (bl/get-expansion-img (:expansions user) true)]])]
 
                            ]))))))
 
