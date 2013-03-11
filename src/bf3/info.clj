@@ -25,7 +25,7 @@
                                      (partition-by :userId)
                                      (map first)
                                      (map #(if (nil? (:expansions %))
-                                             (assoc % :expansions (get-user-expansions :personaName))
+                                             (assoc % :expansions (get-user-expansions (:personaName %)))
                                              %)))
                          :start (->> (sort-by :time battle)
                                      first :time)
