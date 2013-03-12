@@ -23,9 +23,17 @@
                                      (apply concat)
                                      (sort-by :userId)
                                      (partition-by :userId)
-                                     (map #(if-let [tag (filter (fn [u] (not= "" (:clanTags u))) %)]
-                                             (first tag)
-                                             (first %))))
+                                     (map (fn [us]
+                                            (if (nil? (:clanTag (first us)))
+                                              (let [tags (->> battle
+                                                              (mapcat :users)
+                                                              (filter #(= (:personaName (first us))
+                                                                          (:personaName %) ))
+                                                              (filter #(not (nil? (:clanTag %)))))]
+                                                (if (not-empty tags)
+                                                  (merge (first us) (select-keys (first tags) [:clanTag]))
+                                                  (assoc  (first us) :clanTag "")))
+                                              (first us)))))
                          :start (->> (sort-by :time battle)
                                      first :time)
                          :end (->> (sort-by :time battle)
