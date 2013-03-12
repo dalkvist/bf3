@@ -274,8 +274,8 @@
 
                            ]))))))
 
-(defpage  "/gc/update" [] (layout (do (bl/save-live-users)
-                                  (ts/save-live-users))))
+(defpage  "/gc/update" [] (layout [ (count (bl/save-live-users))
+                                    (count (ts/save-live-users))]))
 
 (defpage "/gc/stalking" []
   (response/redirect "/stalking/gc"))

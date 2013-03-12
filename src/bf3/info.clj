@@ -23,10 +23,9 @@
                                      (apply concat)
                                      (sort-by :userId)
                                      (partition-by :userId)
-                                     (map first)
-                                     (map #(if (nil? (:expansions %))
-                                             (assoc % :expansions (get-user-expansions (:personaName %)))
-                                             %)))
+                                     (map #(if-let [tag (filter (fn [u] (not= "" (:clanTags u))) %)]
+                                             (first tag)
+                                             (first %))))
                          :start (->> (sort-by :time battle)
                                      first :time)
                          :end (->> (sort-by :time battle)
@@ -42,3 +41,50 @@
        ))
 
 (def battle-info (mem/memo-ttl get-battle-infos *cache-time*))
+
+(defn- parse-hex [strings]
+  (reduce str (map #(char (if (string? %) (Integer/parseInt % 16) %)) strings)))
+
+(defn- parse-players
+  ([players] (parse-players players []))
+  ([players res]
+     (if (empty? players)
+       res
+       (let [charval? #(and (not= % 64) (> % 40))
+             name (parse-hex (take-while charval? players))
+             postname (drop-while charval? players)
+             taglength (first postname)
+             clanTags (if (= 0 taglength) "" (parse-hex (take taglength (drop 1 postname))))
+             posttags (drop (inc taglength) postname)
+             rank (first posttags)
+             info (take 18 (drop 1 posttags))
+             postinfo (drop 19 posttags)
+             player (zipmap [:name :clanTags :rank :info] [name clanTags rank info] )]
+         (recur postinfo (conj res player))))))
+
+(defn parse-info [rawinfo]
+  (let [info (->> rawinfo
+                  (map #(Integer/parseInt (str %)))
+                  (map (fn [n] (if (neg? n) (+ 256 n) n)))
+                  (map #(Integer/toHexString %))
+                  (map #(if (and (not= "0" %) (= 1 (count %)))
+                          (str "0" %) %)))]
+    {:gameId (->> info (drop 6)
+                  (take 4)
+                  (reduce str)
+                  (#(Integer/parseInt % 16)))
+     :gameMode (->> info (drop 11) (take-while #(not= "0" %))
+                    (map #(char (Integer/parseInt % 16))) (reduce str))
+     :currentMap (->> info (drop 11) (drop-while #(not= "b0" %))
+                      (drop 1) (drop-while #(not= "b0" %)) (drop 2)
+                      (map #(Integer/parseInt % 16))
+                      (take-while #(and (not= % 64) (> % 36)))
+                      (map char)
+                      (reduce str))
+     :players (->> info (drop 11) (drop-while #(not= "b0" %))
+                      (drop 1) (drop-while #(not= "b0" %)) (drop 2)
+                      (map #(Integer/parseInt % 16))
+                      (drop-while #(and (not= % 64) (> % 36)))
+                      (drop-while #(not= % 11))
+                      (drop 1)
+                      parse-players)}))

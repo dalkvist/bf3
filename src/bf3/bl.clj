@@ -8,9 +8,9 @@
   (:use [cheshire.core]
         [net.cgrand.enlive-html]
         [bf3.db])
-  (:import java.net.URL))
+  (:import [java.net URI DatagramPacket DatagramSocket InetAddress]))
 
-(declare get-user)
+(declare get-user get-live-info)
 
 (def ^{:dynamic true} *cache-time* (* 2 60 1000))
 
@@ -133,6 +133,21 @@
 
 (def gc-pride (hash-map :p1 "2832655391698814149"))
 
+(defn- user-loadouts [user]
+  (try
+    (-> (client/get (str "http://battlelog.battlefield.com/bf3/soldier/loadoutPopulateStats/"
+                         (:personaName user) "/" (:personaId user) "/" (:userId user)  "/1/0/")
+                    {:headers {"X-Requested-With" "XMLHttpRequest"}})
+        :body (parse-string true)
+        :data
+        (#(assoc user
+            :loadouts (:currentLoadouts %)
+            :clanTag (:personaClanTag %))))
+    (catch Exception ex
+      user)))
+
+(def get-user-loadouts (mem/memo-ttl user-loadouts *cache-time*))
+
 (defn- get-live-users
   "get user from the battlelog server"
   ([] (get-live-users (->> server-ids vals first)))
@@ -140,10 +155,12 @@
      (let [info (server-info id)]
                  (hash-map :time (get-current-iso-8601-date)
                     :users (->> info :players
-                                (mapcat #(->> % :persona :userId get-user
-                                              (merge {:expansions (get-user-expansions
-                                                                   (->> % :persona :username))}))))
+                                (pmap #(-> (merge (select-keys (:persona %) [:personaName :personaId])
+                                                  (select-keys (get-in % [:persona :user]) [:userId :username]))
+                                           get-user-loadouts)))
                     :server id
+                    :live (get-live-info (get-in info [:server :ip]) (get-in info [:server :port])
+                                         (get-in info [:server :gameId]))
                     :info
                     (merge (hash-map :vehicles (= 1 (get-in info [ :server :settings :vvsa])))
                            (select-keys (:server info) [:hasPassword :gameId :map :mapMode :mapVariant
@@ -201,7 +218,7 @@
                                         {:headers {"X-AjaxNavigation" "1"}})
                             :body (parse-string true)
                             :context
-                            :userGameExpansions
+
                             ))))
 
 (def get-user-expansions (mem/memo-ttl user-expansions *long-cache-time*))
@@ -249,3 +266,58 @@
 
 (defn -main [& m]
  (save-live-users))
+
+(def ^{:Dynamic true} default-dest-port 55000)
+
+(defn live-info
+  ([server-ip server-port game-id]
+     (live-info server-ip server-port game-id default-dest-port))
+  ([server-ip server-port game-id dest-port]
+     (try
+       (let [socket (DatagramSocket. dest-port)
+             info (live-info server-ip server-port game-id dest-port socket)]
+         (.close socket)
+         info)
+       (catch Exception ex
+         (when (and (not (nil? (re-find #"Address already in use" (.getMessage ex))))
+                    (< (- dest-port default-dest-port) 50))
+           (live-info server-ip server-port game-id (int (+ (rand 25) dest-port)))))))
+  ([server-ip server-port game-id dest-port socket]
+     (let
+         [ubyte #(if (>= % 128)
+                   (byte (- % 256))
+                   (byte %))
+          padding "ffffffff51505f000000000"
+          gameid (Integer/toHexString (if (string? game-id) (Integer/parseInt game-id) game-id))
+          msg (->> (str padding gameid)
+                   (partition-all 2) (map #(reduce str %))
+                   (map #(Integer/parseInt (str %) 16))
+                   (map ubyte)
+                   (byte-array))
+          ip (InetAddress/getByName server-ip)
+          ping (DatagramPacket. msg (count msg) ip server-port)
+          pong (DatagramPacket. (byte-array 1024) 1024)
+          ]
+       (.setSoTimeout socket 1000)
+       (.send socket ping)
+       (.disconnect socket)
+       (.receive socket pong)
+       (.disconnect socket)
+       (let [extrapadding (->> (.getData pong)
+                               (map str)
+                               (take-while #(not (= "0" %)))
+                               (map #(Integer/parseInt %))
+                               (map byte)
+                               (byte-array))
+             request-msg (byte-array (concat msg extrapadding))
+             request (DatagramPacket. request-msg (count request-msg) ip server-port)]
+         (.send socket request))
+       (.disconnect socket)
+       (.receive socket pong)
+       (.disconnect socket)
+       (.close socket)
+       (->> (.getData pong)
+            (take (.getLength pong))
+            (map identity)))))
+
+(def get-live-info (mem/memo-ttl live-info *short-cache-time*))
