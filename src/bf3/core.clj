@@ -256,12 +256,13 @@
                              [:span.mode (bl/mapModes (:mapMode battle))]
                              [:span.variant (cond (= 1 (:mapVariant battle)) "Tiny (16 player)"
                                                   true "")]]
-                            [:div.time [:span.start [:span "start: "] (get-time-string (:start battle)) " utc"]
-                             [:span.end [:span "end: "] (get-time-string (:end battle)) " utc"]
+                            [:div.time [:span.start [:span "start: "]
+                                        (get-time-string (->> battle :time :start)) " utc"]
+                             [:span.end [:span "end: "] (get-time-string (->> battle :time :end)) " utc"]
                              ;;TODO add relative to SBT
                              [:span.duration [:span "duration: "]
-                              (->> (time/interval (clj-time.format/parse (:start battle))
-                                                  (clj-time.format/parse (:end battle)))
+                              (->> (time/interval (clj-time.format/parse (->> battle :time :start))
+                                                  (clj-time.format/parse (->> battle :time :end)))
                                    get-interval-string)]]]
                            [:ul.users
                             (for [user (->> (:users battle) (sort-by :clanTag)

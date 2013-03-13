@@ -33,11 +33,11 @@
                                                 (if (not-empty tags)
                                                   (merge (first us) (select-keys (first tags) [:clanTag]))
                                                   (assoc  (first us) :clanTag "")))
-                                              (first us)))))
-                         :start (->> (sort-by :time battle)
-                                     first :time)
-                         :end (->> (sort-by :time battle)
-                                     last :time))))
+                                              (first us))))))
+               {:time {:start (->> (sort-by :time battle)
+                                   first :time)
+                       :end (->> (sort-by :time battle)
+                                 last :time)}}))
 
 (defn- get-battle-infos []
   (->> (get-bl-users)
