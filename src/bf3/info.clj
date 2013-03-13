@@ -41,14 +41,15 @@
                {:live (->> (sort-by :time battle)
                            (map :live))}))
 
-(defn- get-battle-infos []
+(defn- parse-battle-infos []
   (->> (get-bl-users)
        (filter #(not-empty (:users %)))
        (sort-by :server)
        (partition-by :server)
-       (mapcat (fn [x] (partition-by #(select-keys % [:info :gameId]) x)))
-       (pmap get-battle-info)
-       ))
+       (mapcat (fn [x] (partition-by #(select-keys % [:info :gameId]) x)))))
+
+(defn- get-battle-infos []
+  (pmap get-battle-info parse-battle-infos))
 
 (def battle-info (mem/memo-ttl get-battle-infos *cache-time*))
 
@@ -110,19 +111,20 @@
         gameMode (->> postid (drop 1) (take (Integer/parseInt (first postid) 16))
                       (map #(char (Integer/parseInt % 16))) (reduce str))
         postmode (->> postid  (drop (inc (Integer/parseInt (first postid) 16))))
-        mapvariant (first postmode)
+        mapvariant (do (println (first postmode)) (first postmode))
         score (let [infos (->> postmode (drop 2) (take (Integer/parseInt (first (drop 1 postmode)) 16)))]
-                {:score (->> infos
-                             (#(vector (take 2 (drop 1 %)) (take 2 (drop 3 %))
-                                       (take 2 (drop (+ 1 (/ (Integer/parseInt
-                                                              (first (drop 1 postmode)) 16) 2)) %))
-                                       (take 2 (drop (+ 3 (/ (Integer/parseInt
-                                                              (first (drop 1 postmode)) 16) 2)) %))))
-                             (map #(reduce str %))
-                             (map #(Integer/parseInt % 16))
-                             (partition-all 2)
-                             (map #(zipmap [:current :max ] %))
-                             (zipmap [:1 :2]))})
+                {:score (try (->> infos
+                                  (#(vector (take 2 (drop 1 %)) (take 2 (drop 3 %))
+                                            (take 2 (drop (+ 1 (/ (Integer/parseInt
+                                                                   (first (drop 1 postmode)) 16) 2)) %))
+                                            (take 2 (drop (+ 3 (/ (Integer/parseInt
+                                                                   (first (drop 1 postmode)) 16) 2)) %))))
+                                  (map #(reduce str %))
+                                  (map #(Integer/parseInt % 16))
+                                  (partition-all 2)
+                                  (map #(zipmap [:current :max ] %))
+                                  (zipmap [:1 :2]))
+                             (catch Exception e))})
         postinfo (->> postmode  (drop (+ 2 (Integer/parseInt (first (drop 1 postmode)) 16))))
         currentMap (->> postinfo
                         (drop 1) (take (Integer/parseInt (first postinfo) 16))
