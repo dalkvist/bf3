@@ -270,6 +270,9 @@
 (def ^{:Dynamic true} default-dest-port 55000)
 
 (defn live-info
+  ([server] (let [serverinfo (if (string? server) (->> server (bf3.bl/server-info) :server)
+                                 (if (map? server) server))]
+              (when serverinfo (live-info (:ip serverinfo) (:port serverinfo) (:gameId serverinfo)))))
   ([server-ip server-port game-id]
      (live-info server-ip server-port game-id default-dest-port))
   ([server-ip server-port game-id dest-port]
@@ -296,7 +299,7 @@
                    (byte-array))
           ip (InetAddress/getByName server-ip)
           ping (DatagramPacket. msg (count msg) ip server-port)
-          pong (DatagramPacket. (byte-array 1024) 1024)
+          pong (DatagramPacket. (byte-array 16384) 16384)
           ]
        (.setSoTimeout socket 1000)
        (.send socket ping)
