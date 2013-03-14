@@ -10,48 +10,6 @@
 
 (def ^{:dynamic true} *cache-time* (* 2 60 1000))
 
-(defn- get-battle-info [battle]
-  (merge (select-keys (first battle) [:server])
-               (:info   (first battle))
-               (hash-map :users (->> (mapcat :users battle)
-                                     distinct
-                                     (map #(if (string? %)
-                                             (->> % get-username get-user)
-                                             (if (vector? %)
-                                               (flatten %)
-                                               [%])))
-                                     (apply concat)
-                                     (sort-by :userId)
-                                     (partition-by :userId)
-                                     (map (fn [us]
-                                            (if (nil? (:clanTag (first us)))
-                                              (let [tags (->> battle
-                                                              (mapcat :users)
-                                                              (filter #(= (:personaName (first us))
-                                                                          (:personaName %) ))
-                                                              (filter #(not (nil? (:clanTag %)))))]
-                                                (if (not-empty tags)
-                                                  (merge (first us) (select-keys (first tags) [:clanTag]))
-                                                  (assoc  (first us) :clanTag "")))
-                                              (first us))))))
-               {:time {:start (->> (sort-by :time battle)
-                                   first :time)
-                       :end (->> (sort-by :time battle)
-                                 last :time)}}
-               {:live (->> (sort-by :time battle)
-                           (map :live))}))
-
-(defn- parse-battle-infos []
-  (->> (get-bl-users)
-       (filter #(not-empty (:users %)))
-       (sort-by :server)
-       (partition-by :server)
-       (mapcat (fn [x] (partition-by #(select-keys % [:info :gameId]) x)))))
-
-(defn- get-battle-infos []
-  (pmap get-battle-info (parse-battle-infos)))
-
-(def battle-info (mem/memo-ttl get-battle-infos *cache-time*))
 
 (defn- byte-to-char-val [bytes]
   (->> (if (coll? bytes) bytes [bytes])
@@ -91,12 +49,10 @@
                               {:squad (nth info 8)}))
              postinfo (drop 14 posttags)
              player (merge info {:team (if (> players-team1 (count res)) :1 :2)}
-                           (zipmap [:name :clanTags :rank :personaId] [name clanTags rank personaId] ))]
+                           (zipmap [:personaName :clanTags :rank :personaId] [name clanTags rank personaId] ))]
          (recur players-team1 players-team2 postinfo (conj res player))))))
 
-
-
-(defn parse-info [rawinfo]
+(defn parse-rawinfo [rawinfo]
   (let [info (->> rawinfo
                   (map #(Integer/parseInt (str %)))
                   byte-to-char-val
@@ -132,11 +88,62 @@
                         (reduce str))
         postmap (->> postinfo (drop (inc (Integer/parseInt (first postinfo) 16))))
         maxplayers (Integer/parseInt  (first postmap) 16)
-        players-team1 (Integer/parseInt  (first (drop 4 postmap)) 16)
-        players-team2 (Integer/parseInt  (first (drop 5 postmap)) 16)
+        players-team1 (if-let [n (first (drop 4 postmap))]
+                        (Integer/parseInt n  16) 0)
+        players-team2 (if-let [n (first (drop 5 postmap))]
+                        (Integer/parseInt n  16) 0)
         playerstart (drop 12 postmap)
-        players (->> playerstart
-                     (map #(Integer/parseInt % 16))
-                     (parse-players players-team1 players-team2))]
-    (merge score (zipmap [:gameId :gameMode :currentMap :maxplayers :players  :mapVariant]
-                         [gameId gameMode currentMap maxplayers players  mapvariant]))))
+        players (try (->> playerstart
+                          (map #(Integer/parseInt % 16))
+                          (parse-players players-team1 players-team2))
+                     (catch Exception  e))]
+    (merge score (zipmap [:gameId :gameMode :currentMap :maxplayers :users  :mapVariant]
+                         [gameId gameMode currentMap maxplayers players mapvariant]))))
+
+(def parse-info (mem/memo-ttl parse-rawinfo *cache-time*))
+
+(defn- get-battle-info [battle]
+  (merge (select-keys (first battle) [:server])
+               (:info   (first battle))
+               (hash-map :users (->> (if (some #(not (nil? %)) (map :lve battle))
+                                       (->> battle (mapcat #(->> % :live parse-info :players))
+                                            (map #(select-keys % [:personaId :personaName :clanTags])))
+                                       (mapcat :users battle))
+                                     distinct
+                                     (map #(if (string? %)
+                                             (->> % get-username get-user)
+                                             (if (vector? %)
+                                               (flatten %)
+                                               [%])))
+                                     (apply concat)
+                                     (sort-by :userId)
+                                     (partition-by :userId)
+                                     (map (fn [us]
+                                            (if (nil? (:clanTag (first us)))
+                                              (let [tags (->> battle
+                                                              (mapcat :users)
+                                                              (filter #(= (:personaName (first us))
+                                                                          (:personaName %) ))
+                                                              (filter #(not (nil? (:clanTag %)))))]
+                                                (if (not-empty tags)
+                                                  (merge (first us) (select-keys (first tags) [:clanTag]))
+                                                  (assoc  (first us) :clanTag "")))
+                                              (first us))))))
+               {:time {:start (->> (sort-by :time battle)
+                                   first :time)
+                       :end (->> (sort-by :time battle)
+                                 last :time)}}
+               {:live (->> (sort-by :time battle)
+                           (map :live))}))
+
+(defn- parse-battle-infos []
+  (->> (get-bl-users)
+       (filter #(not-empty (:users %)))
+       (sort-by :server)
+       (partition-by :server)
+       (mapcat (fn [x] (partition-by #(select-keys % [:info :gameId]) x)))))
+
+(defn- get-battle-infos []
+  (pmap get-battle-info (parse-battle-infos)))
+
+(def battle-info (mem/memo-ttl get-battle-infos *cache-time*))
