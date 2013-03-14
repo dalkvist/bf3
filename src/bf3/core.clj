@@ -361,7 +361,7 @@
   (->> (client/get (str "http://work.dalkvist.se:8081/get-battle/" gameid
                         "?host=" ((:headers (req/ring-request)) "host") )) :body))
 
-(def battle (mem/memo-ttl get-battles *short-cache-time*))
+(def battle (mem/memo-ttl get-battle *short-cache-time*))
 
 (defpage "/battle/:gameid" [gameid]
   (html5 (battle gameid)))
