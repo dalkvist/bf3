@@ -170,17 +170,20 @@
                                    first :time)
                        :end (->> (sort-by :time battle)
                                  last :time)}}
-               {:live (->> (sort-by :time battle)
+               {:live (->> battle
                            (map :live))}))
 
-(defn- parse-battle-infos []
-  (->> (get-bl-users)
-       (filter #(not-empty (:users %)))
-       (sort-by :server)
-       (partition-by :server)
-       (mapcat (fn [x] (partition-by #(select-keys % [:info :gameId]) x)))))
+(defn- parse-battle-infos
+  ([logs]
+     (->> logs
+          (filter #(not-empty (:users %)))
+          (sort-by :server)
+          (partition-by :server)
+          (mapcat (fn [x] (partition-by #(select-keys % [:info :gameId]) x))))))
 
-(defn- get-battle-infos []
-  (pmap get-battle-info (parse-battle-infos)))
+(defn- get-battle-infos
+  ([] (get-battle-infos (get-bl-users)))
+  ([logs]
+     (pmap get-battle-info (parse-battle-infos logs))))
 
 (def battle-info (mem/memo-ttl get-battle-infos *cache-time*))

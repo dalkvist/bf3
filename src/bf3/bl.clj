@@ -165,7 +165,7 @@
                            (select-keys (:server info) [:hasPassword :gameId :map :mapMode :mapVariant
                                                         :name :matchId]))))))
 
-(def get-users (mem/memo-ttl get-live-users *cache-time*))
+(def get-users (mem/memo-ttl get-live-users *short-cache-time*))
 
 
 (defn- get-test-users [] (-> (client/get "http://bf3.herokuapp.com/gc/bl-users.json" )
@@ -322,4 +322,4 @@
             (take (.getLength pong))
             (map identity)))))
 
-(def get-live-info (mem/memo-ttl live-info *short-cache-time*))
+(def get-live-info (mem/memo-ttl live-info (/ *short-cache-time* 2)))

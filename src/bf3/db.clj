@@ -37,7 +37,7 @@
   (maybe-init)
   (insert! :ts-users ts-user))
 
-(add-index! :bl-users [[:time 1] [:time -1]])
+(add-index! :bl-users [[:time -1]])
 
 (defn get-bl-users
   ([] (get-bl-users true))
@@ -45,17 +45,28 @@
      (maybe-init)
      (map clean-users
           (fetch :bl-users :sort {:time (if descending -1 1)}
-                 :where {"users" {:$ne []}}))))
+                 :where {:$and [ {"live" {:$ne []}}
+                                 {"live" {:$ne nil}}
+                                 {"users" {:$ne []}}]}))))
 
 (defn get-battle
-  ([gameid] (get-battle gameid true))
-  ([gameid descending]
-     (maybe-init)
-     (map clean-users
-          (fetch :bl-users :sort {:time (if descending -1 1)}
-                 :where {:$and [ {"live" {:$ne []}}
-                                 {"users" {:$ne []}}
-                                 {"info.gameId" gameid}]}))))
+  [gameid & {:keys [start end descending]
+               :or {start false end false descending true}}]
+  (maybe-init)
+  (map clean-users
+       (if (and end start)
+         (fetch :bl-users :sort {:time (if descending -1 1)}
+                :where {:$and  [
+                                {"live" {:$ne []}}
+                                {"users" {:$ne []}}
+                                {"info.gameId" gameid}
+                                {"time" {:$gte start
+                                         :$lte end}}]})
+         (fetch :bl-users :sort {:time (if descending -1 1)}
+                :where {:$and  [
+                                {"live" {:$ne []}}
+                                {"users" {:$ne []}}
+                                {"info.gameId" gameid}]}))))
 
 (defn save-bl-user! [bl-user]
   (maybe-init)
