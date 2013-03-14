@@ -275,6 +275,119 @@
 
                            ]))))))
 
+(def rank-url "http://battlelog-cdn.battlefield.com/cdnprefix/14d47a6313f99/public/profile/bf3/stats/ranks/tiny/")
+
+(defpartial show-live-info [liveinfo]
+  [:div#info
+   (for [team (partition-by :team (:users liveinfo))]
+     [:div.team {:id (str "t" (name (:team (first team))))}
+      ((fn [score]
+         [:div.score
+          [:span.max (:max score)]
+          [:span.bar
+           [:span {:style (str "width:" (- (float (* 100 (/ (:current score) (:max score)))) 1) "%;")}]
+           [:span.death {:style (str "width:" (float (* 100 (/ (:bleed score) (:max score)))) "%;")}]
+           [:span.bleed {:style (str "width:"  (float (* 100 (/ (:deaths score) (:max score)))) "%;")}]]
+          [:span.current (:current score)]])
+       (get (:stats liveinfo) (:team (first team)) {}))
+      (into [:div.stats] (concat [[:h4 (char 0x03a3)]]
+                                 (map #(vector :span {:class  (name (first %))} [:h5 (name (first %)) ":"]
+                                               [:span (str (second %))])
+                                      (merge (dissoc (get (:stats liveinfo) (:team (first team)))
+                                                     :max :current)
+                                             {:players (count (:users liveinfo))}))))
+      [:table
+       [:thead (into [:tr] (map #(vector :th %) ["#" "Sq" "Soldier Name" "K" "D" "Score"]))]
+       (into [:tbody]
+             (loop [users (reverse (sort-by :score team)) pos 1 res []]
+               (if (empty? users)
+                 res
+                 (recur
+                  (rest users)
+                  (inc pos)
+                  (conj res
+                        (into [:tr]
+                              (->> [ pos (char (+ 65 (:squad (first users))))
+                                    (list (#(vector :img {:src (str rank-url (if (< 45 %) (str "ss" (- % 45))
+                                                                                 (str "r" %))  ".png")
+                                                          :height "23px" :width " 29px"})
+                                           (:rank (first users)))
+                                          [:span (:personaName (first users))]) (:kills (first users))
+                                    (:deaths (first users)) (:score (first users))]
+                                   (map #(vector :td  (if (coll? %) % (str %)))))))))))]])])
+
+(defpage "/live" {:keys [server]}
+  (layout [:style {:type "text/css"} (gaka/css [:#info
+                                                [:.team :float "left"
+                                                 :margin-right "25px"
+                                                 :width "400px"
+                                                 [:.score :float "right"
+                                                  [:.max :float "left"
+                                                   :font-size "12px"]
+                                                  [:.current :float "right"
+                                                   :font-weight "bold"
+                                                   :font-size "18px"
+                                                   :margin-top "-2px"]
+                                                  [:.bar :display "inline-block"
+                                                   :width "275px"
+                                                   :height "6px"
+                                                   :padding "1px"
+                                                   :margin "3px 5px"
+                                                   :border "1px solid #cccccc"
+                                                   [:span :float "right"
+                                                    :height "100%"
+                                                    :background-color "#000000"]
+                                                   [:.bleed
+                                                    :background-color "rgba(255, 0, 0, 0.33)"]
+                                                   [:.death
+                                                    :background-color "rgba(200, 0, 0, 0.55)"]]]
+                                                 [:.stats :clear :both
+                                                  [:* :display "inline-block"]
+                                                  [:span [:> [:* :margin "5px"]]
+                                                   [:h5 :margin "0px 0px 5px 5px"]]]
+                                                 [:tr :font-family "Arial"
+                                                  [:th
+                                                   :font-weight "normal"
+                                                   :font-size "12px" ]
+                                                  ["th:nth-child(3)" :text-align "left"
+                                                   :padding-left "8px"]
+                                                  [:td
+                                                   :border-top "1px solid #F2F2F2"
+                                                   :border-right "1px solid #F2F2F2"
+                                                   :padding "0 5px"
+                                                   :vertical-align "middle"
+                                                   :text-align "center"]
+                                                  [:span :margin "0 0 0 5px"]
+                                                  [:img :margin "-2px 0 0 0"]
+                                                  ["td:nth-child(2)"
+                                                   :background "#A8A7A6"
+                                                   :color "white"
+                                                   :font-weight "bold"
+                                                   :font-size "12px"
+                                                   :line-height "18px"
+                                                   :margin "5px"
+                                                   :padding "2px"
+                                                   :width "16px"
+                                                   :height "17px"
+                                                   :display "inline-block"
+                                                   :-webkit-border-radius "2px"
+                                                   :-moz-border-radius "2px"
+                                                   :border-radius "2px"]
+                                                  ["td:nth-child(3)" :width "270px"
+                                                   [:* :float "left"]]]]
+                                                [:#t2 [:.score :float "left"
+                                                       [:.max :float "right"]
+                                                       [:.bar [:span :float "left"]]
+                                                       [:.current :float "left"]]]] )]
+          (show-live-info (->> "87989727-762a-420f-8aab-48987c6a4dca" bf3.bl/get-live-info bf3.info/parse-info ))))
+
+(defpage "/live/" []
+  (response/redirect "/live"))
+
+
+(defpage "/live/:server" {:keys [server]}
+  (res/json (->> "87989727-762a-420f-8aab-48987c6a4dca" bf3.bl/get-live-info bf3.info/parse-info )))
+
 (defpage  "/gc/update" [] (layout [ (count (bl/save-live-users))
                                     (count (ts/save-live-users))]))
 
