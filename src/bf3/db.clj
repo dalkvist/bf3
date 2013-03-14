@@ -26,7 +26,7 @@
       )))
 
 (defn- clean-users [user]
-  (select-keys user (remove #(= :_id %) (keys user))))
+  (dissoc user :_id))
 
 (defn get-ts-users []
   (maybe-init)
@@ -37,12 +37,25 @@
   (maybe-init)
   (insert! :ts-users ts-user))
 
+(add-index! :bl-users [[:time 1] [:time -1]])
+
 (defn get-bl-users
-  ([] (get-bl-users 153000))
-  ([skip]
+  ([] (get-bl-users true))
+  ([descending]
      (maybe-init)
      (map clean-users
-          (fetch :bl-users :skip skip))))
+          (fetch :bl-users :sort {:time (if descending -1 1)}
+                 :where {"users" {:$ne []}}))))
+
+(defn get-battle
+  ([gameid] (get-battle gameid true))
+  ([gameid descending]
+     (maybe-init)
+     (map clean-users
+          (fetch :bl-users :sort {:time (if descending -1 1)}
+                 :where {:$and [ {"live" {:$ne []}}
+                                 {"users" {:$ne []}}
+                                 {"info.gameId" gameid}]}))))
 
 (defn save-bl-user! [bl-user]
   (maybe-init)
