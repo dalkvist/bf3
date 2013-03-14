@@ -233,10 +233,10 @@
            p
            ids))))
 
-
 (defn save-live-users []
   (doseq [[server id] server-ids]
-    (save-bl-user! (get-users id))))
+    (let [info (get-users id)]
+      (when (:users info) (save-bl-user! info)))))
 
 (defn- get-platoon-info [id]
   (-> (client/get (str "http://battlelog.battlefield.com/bf3/platoon/" id "/listmembers/")
