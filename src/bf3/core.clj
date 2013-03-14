@@ -357,14 +357,16 @@
                                                           (map #(:origin-name %) )
                                                           (interpose "<br/>"))))))))))))
 
-(defn- get-battle [gameid]
+(defn- get-battle [{:keys [gameid start end] :or {start false end false}}]
   (->> (client/get (str "http://work.dalkvist.se:8081/get-battle/" gameid
-                        "?host=" ((:headers (req/ring-request)) "host") )) :body))
+                        "?host=" ((:headers (req/ring-request)) "host")
+                        (when start "&start=" start)
+                        (when end   "&end="   end))) :body))
 
 (def battle (mem/memo-ttl get-battle *short-cache-time*))
 
-(defpage "/battle/:gameid" [gameid]
-  (html5 (battle gameid)))
+(defpage "/battle/:gameid" {:keys [gameid start end]}
+  (html5 (battle gameid :start start :end end)))
 
 
 (defpage "/get-battle/:gameid" {:keys [gameid start end host] :or {start false end false
