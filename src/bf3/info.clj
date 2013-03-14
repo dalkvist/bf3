@@ -45,12 +45,35 @@
                                    (#(vector (take 4 %) (take 2 (drop 4 %)) (take 2 (drop 6 %))))
                                    (map #(reduce str %))
                                    (map #(Integer/parseInt % 16))
-                                   (zipmap [:score :kill :deaths]))
+                                   (zipmap [:score :kills :deaths]))
                               {:squad (nth info 8)}))
              postinfo (drop 14 posttags)
              player (merge info {:team (if (> players-team1 (count res)) :1 :2)}
                            (zipmap [:personaName :clanTags :rank :personaId] [name clanTags rank personaId] ))]
          (recur players-team1 players-team2 postinfo (conj res player))))))
+
+(defn- get-stats [score users]
+  (->> (merge-with merge (->> users (partition-by :team)
+                              (map (fn [t] (hash-map (:team (first t))
+                                                    (->> t (map #(select-keys % [:kills :deaths]))
+                                                         (apply merge-with +)))))
+                              (reduce merge))
+                   score)
+       (#(if (= 2 (count (keys %)))
+           (->> (merge-with merge % (apply hash-map (mapcat (fn [[t o]]
+                                                              (vector
+                                                               (nth (keys %) t)
+                                                               (hash-map :revives
+                                                                         ((fn [n] (if (neg? n) 0 n))
+                                                                          (- (:kills (nth (vals %) o))
+                                                                             (:deaths (nth (vals %) t )))))))
+                                                            [[0 1] [1 0]])))
+                (map (fn [m] (hash-map (first m) (assoc (second m) :bleed ((fn [n] (if (neg? n) 0 n))
+                                                                          (- (:max (second m))
+                                                                             (:current (second m))
+                                                                             (:deaths (second m))))))))
+                (apply merge))
+           %))))
 
 (defn parse-rawinfo [rawinfo]
   (let [info (->> rawinfo
@@ -107,9 +130,12 @@
         players (try (->> playerstart
                           (map #(Integer/parseInt % 16))
                           (parse-players players-team1 players-team2))
-                     (catch Exception  e))]
-    (merge score (zipmap [:gameId :gameMode :currentMap :maxplayers :users  :mapVariant]
-                         [gameId gameMode currentMap maxplayers players mapvariant]))))
+                     (catch Exception  e
+                       (println (.getMessage e))))
+        stats (try (get-stats (:score score) players)
+                   (catch Exception e))]
+    (zipmap [:gameId :gameMode :currentMap :maxplayers :users  :mapVariant :stats]
+            [gameId gameMode currentMap maxplayers players mapvariant stats])))
 
 (def parse-info (mem/memo-ttl parse-rawinfo *cache-time*))
 
