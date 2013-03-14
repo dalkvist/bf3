@@ -374,7 +374,8 @@
                                      (conj (show-battle-info battle)
                                            [:a {:href (str "http://" host "/live/" (:server battle))}
                                             "go live"]))
-                               (->> battle :live (map #(-> % bf3.info/parse-info show-live-info))))))))
+                               (->> battle :live  (take 1)
+                                    (map #(-> % bf3.info/parse-info show-live-info))))))))
 
 (defn- get-battles []
   (->> (client/get "http://work.dalkvist.se:8081/gc/battles/") :body))
