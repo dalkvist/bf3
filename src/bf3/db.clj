@@ -37,8 +37,6 @@
   (maybe-init)
   (insert! :ts-users ts-user))
 
-(add-index! :bl-users [[:time -1]])
-
 (defn get-bl-users
   ([] (get-bl-users true))
   ([descending]
