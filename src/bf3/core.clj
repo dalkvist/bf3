@@ -360,8 +360,8 @@
 (defn- get-battle [gameid & {:keys [start end] :or {start false end false}}]
   (->> (client/get (str "http://work.dalkvist.se:8081/get-battle/" gameid
                         "?host=" ((:headers (req/ring-request)) "host")
-                        (when start (str "&start=" start))
-                        (when end   (str "&end="   end)))) :body))
+                        (if start (str "&start=" start) "")
+                        (if end   (str "&end="   end) "'"))) :body))
 
 (def battle (mem/memo-ttl get-battle *short-cache-time*))
 
