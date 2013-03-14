@@ -358,7 +358,8 @@
                                                           (interpose "<br/>"))))))))))))
 
 (defn- get-battle [gameid]
-  (->> (client/get (str "http://work.dalkvist.se:8081/get-battle/" gameid)) :body))
+  (->> (client/get (str "http://work.dalkvist.se:8081/get-battle/" gameid
+                        "?host=" ((:headers (req/ring-request)) "host") )) :body))
 
 (def battle (mem/memo-ttl get-battles *short-cache-time*))
 
@@ -366,12 +367,12 @@
   (html5 (battle gameid)))
 
 
-(defpage "/get-battle/:gameid" {:keys [gameid start end] :or {start false end false}}
+(defpage "/get-battle/:gameid" {:keys [gameid start end host] :or {start false end false
+                                                                   host ((:headers (req/ring-request)) "host")}}
   (let [battle (first (bf3.info/battle-info (bf3.db/get-battle gameid :start start :end end)))]
     (layout (when battle (list (into [:div.info]
                                      (conj (show-battle-info battle)
-                                           [:a {:href (let [host ((:headers (req/ring-request)) "host")]
-                                                        (str "http://" host "/live/" (:server battle)))}
+                                           [:a {:href (str "http://" host "/live/" (:server battle))}
                                             "go live"]))
                                (->> battle :live (map #(-> % bf3.info/parse-info show-live-info))))))))
 
@@ -383,7 +384,7 @@
 (defpage "/gc/battles" []
   (html5 (battles)))
 
-(defpage "/gc/battles/" []
+(defpage "/gc/battles/" {:keys [host] :or {host ((:headers (req/ring-request)) "host")}}
   (layout [:style {:type "text/css"} (gaka/css [:.battles :float "left"
                                                 [:span :margin "0 1px"]
                                                 [:.user
@@ -397,10 +398,11 @@
                           [:li.battle
                            (into [:div.info]
                                  (conj (show-battle-info battle)
-                                       [:a {:href (let [host ((:headers (req/ring-request)) "host")]
-                                                    (str "http://" host
-                                                         (if (= "localhost:8081" host) "/get-battle/" "/battle/")
-                                                         (:gameId battle) "?start=" (-> battle :time :start) "&end="  (-> battle :time :end)))}
+                                       [:a {:href
+                                            (str "http://" host
+                                                 (if (= "localhost:8081" host) "/get-battle/" "/battle/")
+                                                 (:gameId battle) "?start=" (-> battle :time :start)
+                                                 "&end="  (-> battle :time :end))}
                                         "show score"]))
                            [:ul.users
                             (for [user (->> (:users battle) (sort-by :clanTag)
