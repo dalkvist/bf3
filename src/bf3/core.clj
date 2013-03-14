@@ -357,7 +357,7 @@
                                                           (map #(:origin-name %) )
                                                           (interpose "<br/>"))))))))))))
 
-(defn- get-battle [{:keys [gameid start end] :or {start false end false}}]
+(defn- get-battle [gameid & {:keys [start end] :or {start false end false}}]
   (->> (client/get (str "http://work.dalkvist.se:8081/get-battle/" gameid
                         "?host=" ((:headers (req/ring-request)) "host")
                         (when start "&start=" start)
