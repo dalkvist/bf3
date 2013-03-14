@@ -68,19 +68,22 @@
                       (map #(char (Integer/parseInt % 16))) (reduce str))
         postmode (->> postid  (drop (inc (Integer/parseInt (first postid) 16))))
         mapvariant (first postmode)
-        score (let [infos (->> postmode (drop 2) (take (Integer/parseInt (first (drop 1 postmode)) 16)))]
-                {:score (try (->> infos
-                                  (#(vector (take 2 (drop 1 %)) (take 2 (drop 3 %))
-                                            (take 2 (drop (+ 1 (/ (Integer/parseInt
-                                                                   (first (drop 1 postmode)) 16) 2)) %))
-                                            (take 2 (drop (+ 3 (/ (Integer/parseInt
-                                                                   (first (drop 1 postmode)) 16) 2)) %))))
+        score (try (let [l (Integer/parseInt (first (drop 1 postmode)) 16)
+                         infos (->> postmode (drop 2) (take l)
+                                    (#(if (re-find #"rush" (s/lower-case gameMode))
+                                        (vector (take 2 (drop 2 %)) (take 2 (drop 4 %))
+                                                (take 1 (drop (+ 2 (/ l 2)) %))
+                                                (take 1 (drop (+ 3 (/ l 2)) %)))
+                                        (vector (take 2 (drop 1 %)) (take 2 (drop 3 %))
+                                                (take 2 (drop (+ 1 (/ l 2)) %))
+                                                (take 2 (drop (+ 3 (/ l 2)) %))))))]
+                     {:score (->> infos
                                   (map #(reduce str %))
                                   (map #(Integer/parseInt % 16))
                                   (partition-all 2)
                                   (map #(zipmap [:current :max ] %))
-                                  (zipmap [:1 :2]))
-                             (catch Exception e))})
+                                  (zipmap [:1 :2]))})
+                   (catch Exception e))
         postinfo (->> postmode  (drop (+ 2 (Integer/parseInt (first (drop 1 postmode)) 16))))
         currentMap (->> postinfo
                         (drop 1) (take (Integer/parseInt (first postinfo) 16))
