@@ -378,7 +378,8 @@
                                     (map #(-> % bf3.info/parse-info show-live-info))))))))
 
 (defn- get-battles []
-  (->> (client/get "http://work.dalkvist.se:8081/gc/battles/") :body))
+  (->> (client/get (str "http://work.dalkvist.se:8081/gc/battles/"
+                        "?host=" ((:headers (req/ring-request)) "host"))) :body))
 
 (def battles (mem/memo-ttl get-battles *short-cache-time*))
 
