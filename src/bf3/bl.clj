@@ -156,8 +156,7 @@
                  (hash-map :time (get-current-iso-8601-date)
                     :users (->> info :players
                                 (pmap #(-> (merge (select-keys (:persona %) [:personaName :personaId])
-                                                  (select-keys (get-in % [:persona :user]) [:userId :username]))
-                                           get-user-loadouts)))
+                                                  (select-keys (get-in % [:persona :user]) [:userId :username])))))
                     :server id
                     :live (get-live-info (get-in info [:server :ip]) (get-in info [:server :port])
                                          (get-in info [:server :gameId]))

@@ -49,7 +49,7 @@
        (mapcat (fn [x] (partition-by #(select-keys % [:info :gameId]) x)))))
 
 (defn- get-battle-infos []
-  (pmap get-battle-info parse-battle-infos))
+  (pmap get-battle-info (parse-battle-infos)))
 
 (def battle-info (mem/memo-ttl get-battle-infos *cache-time*))
 
@@ -111,7 +111,7 @@
         gameMode (->> postid (drop 1) (take (Integer/parseInt (first postid) 16))
                       (map #(char (Integer/parseInt % 16))) (reduce str))
         postmode (->> postid  (drop (inc (Integer/parseInt (first postid) 16))))
-        mapvariant (do (println (first postmode)) (first postmode))
+        mapvariant (first postmode)
         score (let [infos (->> postmode (drop 2) (take (Integer/parseInt (first (drop 1 postmode)) 16)))]
                 {:score (try (->> infos
                                   (#(vector (take 2 (drop 1 %)) (take 2 (drop 3 %))
