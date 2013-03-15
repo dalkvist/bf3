@@ -243,20 +243,23 @@
                                                    :-moz-border-radius "2px"
                                                    :border-radius "2px"]
                                                   ["td:nth-child(3)" :width "300px"
-                                                   [:* :float "left"]]]]
+                                                   [:* :float "left"]]]
+                                                 [:tr.inactive :color "#CCCCCC"]]
                                                 [:#t2 [:.score :float "left"
                                                        [:.max :float "right"]
                                                        [:.bar [:span :float "left"]]
                                                        [:.current :float "left"]]]] )]
-   (for [team (partition-by :team (:users liveinfo))]
+   (for [team (partition-by :team (sort-by :team (:users liveinfo)))]
      [:div.team {:id (str "t" (name (:team (first team))))}
       ((fn [score]
          [:div.score
           [:span.max (:max score)]
-          [:span.bar
-           [:span {:style (str "width:" (- (float (* 100 (/ (:current score) (:max score)))) 1) "%;")}]
-           [:span.death {:style (str "width:" (float (* 100 (/ (:bleed score) (:max score)))) "%;")}]
-           [:span.bleed {:style (str "width:"  (float (* 100 (/ (:deaths score) (:max score)))) "%;")}]]
+          (vector :span.bar
+                  [:span {:style (str "width:" (- (float (* 100 (/ (:current score) (:max score)))) 1) "%;")}]
+                  (when (:bleed score)
+                    [:span.death {:style (str "width:" (float (* 100 (/ (:bleed score) (:max score)))) "%;")}])
+                  (when (:deaths score)
+                    [:span.bleed {:style (str "width:"  (float (* 100 (/ (:deaths score) (:max score)))) "%;")}]))
           [:span.current (:current score)]])
        (get (:stats liveinfo) (:team (first team)) {}))
       (into [:div.stats] (concat [[:h4 (char 0x03a3)]]
@@ -275,8 +278,8 @@
                   (rest users)
                   (inc pos)
                   (conj res
-                        (into [:tr]
-                              (->> [ pos (char (+ 65 (:squad (first users))))
+                        (into [:tr {:class (if (false? (:online (first users))) "inactive" "")}]
+                              (->> [ pos (if (< 0 (:squad (first users))) (char (+ 64 (:squad (first users)))) "")
                                     (list (#(vector :img {:src (str rank-url (if (< 45 %) (str "ss" (- % 45))
                                                                                  (str "r" %))  ".png")
                                                           :height "23px" :width " 29px"})
@@ -376,8 +379,9 @@
                                      (conj (show-battle-info battle)
                                            [:a {:href (str "http://" host "/live/" (:server battle))}
                                             "go live"]))
-                               (->> battle :live  (take 1)
-                                    (map #(-> % bf3.info/parse-info show-live-info))))))))
+                               (->> battle :live  (map bf3.info/parse-info)
+                                    bf3.info/merge-infos
+                                    show-live-info))))))
 
 (defn- get-battles []
   (->> (client/get (str "http://work.dalkvist.se:8081/gc/battles/"

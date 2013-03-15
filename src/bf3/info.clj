@@ -53,88 +53,92 @@
          (recur players-team1 players-team2 postinfo (conj res player))))))
 
 (defn- get-stats [score users]
-  (->> (merge-with merge (->> users (partition-by :team)
-                              (map (fn [t] (hash-map (:team (first t))
-                                                    (->> t (map #(select-keys % [:kills :deaths]))
-                                                         (apply merge-with +)))))
-                              (reduce merge))
-                   score)
-       (#(if (= 2 (count (keys %)))
-           (->> (merge-with merge % (apply hash-map (mapcat (fn [[t o]]
-                                                              (vector
-                                                               (nth (keys %) t)
-                                                               (hash-map :revives
-                                                                         ((fn [n] (if (neg? n) 0 n))
-                                                                          (- (:kills (nth (vals %) o))
-                                                                             (:deaths (nth (vals %) t )))))))
-                                                            [[0 1] [1 0]])))
-                (map (fn [m] (hash-map (first m) (assoc (second m) :bleed ((fn [n] (if (neg? n) 0 n))
-                                                                          (- (:max (second m))
-                                                                             (:current (second m))
-                                                                             (:deaths (second m))))))))
-                (apply merge))
-           %))))
+  (if (or (nil? users) (empty? users))
+     score
+    (->> (merge-with merge (->> users (partition-by :team)
+                                (map (fn [t] (hash-map (:team (first t))
+                                                      (->> t (map #(select-keys % [:kills :deaths]))
+                                                           (apply merge-with +)))))
+                                (reduce merge))
+                     score)
+         (#(if (= 2 (count (keys %)))
+             (->> (merge-with merge % (apply hash-map (mapcat (fn [[t o]]
+                                                                (vector
+                                                                 (nth (keys %) t)
+                                                                 (hash-map :revives
+                                                                           ((fn [n] (if (neg? n) 0 n))
+                                                                            (- (:kills (nth (vals %) o))
+                                                                               (:deaths (nth (vals %) t )))))))
+                                                              [[0 1] [1 0]])))
+                  (map (fn [m] (hash-map (first m) (assoc (second m) :bleed ((fn [n] (if (neg? n) 0 n))
+                                                                            (- (:max (second m))
+                                                                               (:current (second m))
+                                                                               (:deaths (second m))))))))
+                  (apply merge))
+             %)))))
 
 (defn parse-rawinfo [rawinfo]
-  (let [info (->> rawinfo
-                  (map #(Integer/parseInt (str %)))
-                  byte-to-char-val
-                  (map #(Integer/toHexString %))
-                  (map #(if (and (not= "0" %) (= 1 (count %)))
-                          (str "0" %) %)))
-        gameId (->> info (drop 2)
-                    (take 8)
-                    (reduce str)
-                    (#(Integer/parseInt % 16)))
-        postid (->> info (drop 10))
-        gameMode (->> postid (drop 1) (take (Integer/parseInt (first postid) 16))
-                      (map #(char (Integer/parseInt % 16))) (reduce str))
-        postmode (->> postid  (drop (inc (Integer/parseInt (first postid) 16))))
-        mapvariant (first postmode)
-        score (try (let [l (Integer/parseInt (first (drop 1 postmode)) 16)
-                         infos (->> postmode (drop 2) (take l))]
-                     {:score (if (re-find #"squaddeath" (s/lower-case gameMode))
-                               (->> infos (partition-all 5)
-                                    (map (fn [t] (vector (keyword (str (Integer/parseInt (first t))))
-                                                        (->> (rest t) (partition-all 2)
-                                                             (map #(reduce str %))
-                                                             (map #(Integer/parseInt % 16))
-                                                             (zipmap [:current :max])))))
-                                    flatten (apply hash-map))
-                               (->> infos
-                                    (#(if (re-find #"rush" (s/lower-case gameMode))
-                                        (vector (take 2 (drop 2 %)) (take 2 (drop 4 %))
-                                                (take 1 (drop (+ 2 (/ l 2)) %))
-                                                (take 1 (drop (+ 3 (/ l 2)) %)))
-                                        (vector (take 2 (drop 1 %)) (take 2 (drop 3 %))
-                                                (take 2 (drop (+ 1 (/ l 2)) %))
-                                                (take 2 (drop (+ 3 (/ l 2)) %)))))
-                                    (map #(reduce str %))
-                                    (map #(Integer/parseInt % 16))
-                                    (partition-all 2)
-                                    (map #(zipmap [:current :max ] %))
-                                    (zipmap [:1 :2])))})
-                   (catch Exception e))
-        postinfo (->> postmode  (drop (+ 2 (Integer/parseInt (first (drop 1 postmode)) 16))))
-        currentMap (->> postinfo
-                        (drop 1) (take (Integer/parseInt (first postinfo) 16))
-                        parse-hex
-                        (reduce str))
-        postmap (->> postinfo (drop (inc (Integer/parseInt (first postinfo) 16))))
-        maxplayers (Integer/parseInt  (first postmap) 16)
-        players-team1 (if-let [n (first (drop 4 postmap))]
-                        (Integer/parseInt n  16) 0)
-        players-team2 (if-let [n (first (drop 5 postmap))]
-                        (Integer/parseInt n  16) 0)
-        playerstart (drop 12 postmap)
-        players (try (->> playerstart
-                          (map #(Integer/parseInt % 16))
-                          (parse-players players-team1 players-team2))
-                     (catch Exception  e))
-        stats (try (get-stats (:score score) players)
-                   (catch Exception e))]
-    (zipmap [:gameId :gameMode :currentMap :maxplayers :users  :mapVariant :stats]
-            [gameId gameMode currentMap maxplayers players mapvariant stats])))
+  (try
+    (let [info (->> rawinfo
+                    (map #(Integer/parseInt (str %)))
+                    byte-to-char-val
+                    (map #(Integer/toHexString %))
+                    (map #(if (and (not= "0" %) (= 1 (count %)))
+                            (str "0" %) %)))
+          gameId (->> info (drop 2)
+                      (take 8)
+                      (reduce str)
+                      (#(Integer/parseInt % 16)))
+          postid (->> info (drop 10))
+          gameMode (->> postid (drop 1) (take (Integer/parseInt (first postid) 16))
+                        (map #(char (Integer/parseInt % 16))) (reduce str))
+          postmode (->> postid  (drop (inc (Integer/parseInt (first postid) 16))))
+          mapvariant (first postmode)
+          score (try (let [l (Integer/parseInt (first (drop 1 postmode)) 16)
+                           infos (->> postmode (drop 2) (take l))]
+                       {:score (if (re-find #"squaddeath" (s/lower-case gameMode))
+                                 (->> infos (partition-all 5)
+                                      (map (fn [t] (vector (keyword (str (Integer/parseInt (first t))))
+                                                          (->> (rest t) (partition-all 2)
+                                                               (map #(reduce str %))
+                                                               (map #(Integer/parseInt % 16))
+                                                               (zipmap [:current :max])))))
+                                      flatten (apply hash-map))
+                                 (->> infos
+                                      (#(if (re-find #"rush" (s/lower-case gameMode))
+                                          (vector (take 2 (drop 2 %)) (take 2 (drop 4 %))
+                                                  (take 1 (drop (+ 2 (/ l 2)) %))
+                                                  (take 1 (drop (+ 3 (/ l 2)) %)))
+                                          (vector (take 2 (drop 1 %)) (take 2 (drop 3 %))
+                                                  (take 2 (drop (+ 1 (/ l 2)) %))
+                                                  (take 2 (drop (+ 3 (/ l 2)) %)))))
+                                      (map #(reduce str %))
+                                      (map #(Integer/parseInt % 16))
+                                      (partition-all 2)
+                                      (map #(zipmap [:current :max ] %))
+                                      (zipmap [:1 :2])))})
+                     (catch Exception e))
+          postinfo (->> postmode  (drop (+ 2 (Integer/parseInt (first (drop 1 postmode)) 16))))
+          currentMap (->> postinfo
+                          (drop 1) (take (Integer/parseInt (first postinfo) 16))
+                          parse-hex
+                          (reduce str))
+          postmap (->> postinfo (drop (inc (Integer/parseInt (first postinfo) 16))))
+          maxplayers (Integer/parseInt  (first postmap) 16)
+          players-team1 (if-let [n (first (drop 4 postmap))]
+                          (Integer/parseInt n  16) 0)
+          players-team2 (if-let [n (first (drop 5 postmap))]
+                          (Integer/parseInt n  16) 0)
+          playerstart (drop 12 postmap)
+          players (try (->> playerstart
+                            (map #(Integer/parseInt % 16))
+                            (parse-players players-team1 players-team2))
+                       (catch Exception  e))
+          stats (try (get-stats (:score score) players)
+                     (catch Exception e))]
+      (zipmap [:gameId :gameMode :currentMap :maxplayers :users  :mapVariant :stats]
+              [gameId gameMode currentMap maxplayers players mapvariant stats]))
+    (catch Exception e)))
 
 (def parse-info (mem/memo-ttl parse-rawinfo *cache-time*))
 
@@ -186,3 +190,18 @@
      (pmap get-battle-info (parse-battle-infos logs))))
 
 (def battle-info (mem/memo-ttl get-battle-infos *cache-time*))
+
+(defn merge-infos [infos]
+  (reduce (fn [l1 l2]
+            (let [m (merge l1 l2)
+                  online (fn [u t] (if (not-empty u) (assoc u :online t) u))
+                  u2 (map #(online % true) (get l2 :users []))
+                  u2-ids (into #{} (map :personaId u2))
+                  u1-ids (map :personaId (get l1 :users []))
+                  u1 (->> (get l1 :users [])
+                          (filter (fn [u] (not (contains? u2-ids (:personaId u)))))
+                          (map #(online % false)))]
+              (merge m {:users
+                        (filter not-empty
+                                (concat [] u1 u2))})))
+          infos))
