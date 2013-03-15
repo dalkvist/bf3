@@ -130,8 +130,7 @@
         players (try (->> playerstart
                           (map #(Integer/parseInt % 16))
                           (parse-players players-team1 players-team2))
-                     (catch Exception  e
-                       (println (.getMessage e))))
+                     (catch Exception  e))
         stats (try (get-stats (:score score) players)
                    (catch Exception e))]
     (zipmap [:gameId :gameMode :currentMap :maxplayers :users  :mapVariant :stats]

@@ -264,7 +264,7 @@
                                                [:span (str (second %))])
                                       (merge (dissoc (get (:stats liveinfo) (:team (first team)))
                                                      :max :current)
-                                             {:players (count (:users liveinfo))}))))
+                                             {:players (count team)}))))
       [:table
        [:thead (into [:tr] (map #(vector :th %) ["#" "Sq" "Soldier Name" "K" "D" "Score"]))]
        (into [:tbody]
