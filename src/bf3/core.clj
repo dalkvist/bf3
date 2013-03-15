@@ -5,10 +5,10 @@
         hiccup.core
         hiccup.page-helpers
         [bf3.bf3stats :only [random-loadout]]
-        [bf3.db :only [get-ts-users get-bl-users]]
+        [bf3.db :only [get-ts-users get-bl-users get-battle]]
+        [bf3.info :only[battle-info parse-info merge-infos]]
         [bf3.stats :only [get-stats battleday-roster get-battleday]]
         [bf3.ki :only [ki-players get-ta-info get-ki-info]]
-        [bf3.info :only [battle-info]]
         [cheshire.core :only [encode generate-string]])
   (:require (compojure [route :as route])
             (ring.util [response :as response])
@@ -58,8 +58,8 @@
   (html5
    [:head
     [:title "Battlefield 3" ]
-     ;; (include-css "/css/reset.css")
-     ]
+    (include-js "//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js")
+    ]
     [:body
      [:div#wrapper
       content
@@ -178,139 +178,185 @@
                              (:users %))]
                        [:div.clearer]])))])
 
+(defpartial battle-layout [& content]
+  (layout  [:style {:type "text/css"} (gaka/css [:div.clear :clear "both"]
+                                                [:.left :float "left"]
+                                                [:.right :float "right"]
+                                                [:.info :max-width "980px"]
+                                                [:.battles :float "left"
+                                                  [:li
+                                                   :background-color "#ccc"
+                                                   :border "1px solid #666"
+                                                   :border-radius "20px"
+                                                   :padding "10px"
+                                                   :margin "5px 0px"
+                                                   :list-style-type "none"
+                                                   [:.info
+                                                    [:h3
+                                                     :font-weight "normal"
+                                                     :margin "0 0 5px 0"]
+                                                    [:.right :margin "0 3px"
+                                                     [:span :margin "2px"]]
+                                                    [:div [:> [:span :display "block"]]]]
+                                                   [:span :margin "0 1px"]
+                                                   [:a.toggle.score :display "none"]
+                                                   [:ul.users :display :none
+                                                    [:.user
+                                                     [:.name
+                                                      :width "210px"
+                                                      :display "inline-block"]]]]]
+                                                [:.expansions :display "none"]
+                                                [:.duration :display "block"]
+                                                [:a.toggle.users :display "none"]
+                                                [:.livecontainer
+                                                 :display "none"
+                                                 :background-color "#fff"
+                                                 :padding "10px"
+                                                 :margin "10px 0"
+                                                 :border-radius "20px"
+                                                 [:.team :float "left"
+                                                  :margin "10px"
+                                                  :width "475px"
+                                                  [:.score :float "right"
+                                                   :text-align "center"
+                                                   :width "100%"
+                                                   [:.max :float "left"
+                                                    :font-size "12px"]
+                                                   [:.current :float "right"
+                                                    :font-weight "bold"
+                                                    :font-size "18px"
+                                                    :margin-top "-2px"]
+                                                   [:.bar :display "inline-block"
+                                                    :width "85%"
+                                                    :height "6px"
+                                                    :padding "1px"
+                                                    :margin "3px 5px"
+                                                    :border "1px solid #cccccc"
+                                                    [:span :float "right"
+                                                     :height "100%"
+                                                     :background-color "#000000"
+                                                     :margin "0px"]
+                                                    [:.bleed
+                                                     :background-color "rgba(200, 0, 0, 0.55)"]
+                                                    [:.death
+                                                     :background-color "rgba(255, 0, 0, 0.33)"]]]
+                                                  [:.stats :clear :both
+                                                   :text-align "center"
+                                                   [:* :display "inline-block"]
+                                                   [:span [:> [:* :margin "5px"]]
+                                                    [:h5 :margin "0px 0px 5px 5px"]]]
+                                                  [:tr :font-family "Arial"
+                                                   [:th
+                                                    :font-weight "normal"
+                                                    :font-size "12px" ]
+                                                   ["th:nth-child(3)" :text-align "left"
+                                                    :padding-left "8px"]
+                                                   [:td
+                                                    :border-top "1px solid #F2F2F2"
+                                                    :border-right "1px solid #F2F2F2"
+                                                    :padding "0 5px"
+                                                    :vertical-align "middle"
+                                                    :text-align "center"]
+                                                   [:span :margin "0 0 0 5px"]
+                                                   [:img :margin "-2px 0 0 0"]
+                                                   [:.tags :font-size "14px"]
+                                                   ["td:nth-child(2)"
+                                                    :background "#A8A7A6"
+                                                    :color "white"
+                                                    :font-weight "bold"
+                                                    :font-size "12px"
+                                                    :line-height "18px"
+                                                    :margin "5px"
+                                                    :padding "2px"
+                                                    :width "16px"
+                                                    :height "17px"
+                                                    :display "inline-block"
+                                                    :-webkit-border-radius "2px"
+                                                    :-moz-border-radius "2px"
+                                                    :border-radius "2px"]
+                                                   ["td:nth-child(3)" :width "300px"
+                                                    [:* :float "left"]]]
+                                                  [:tr.inactive :color "#CCCCCC"]]
+                                                 [:#t2 [:.score :float "left"
+                                                        [:.max :float "right"]
+                                                        [:.bar [:span :float "left"]]
+                                                        [:.current :float "left"]]]] )]
+           content))
 
 (def rank-url "http://battlelog-cdn.battlefield.com/cdnprefix/14d47a6313f99/public/profile/bf3/stats/ranks/tiny/")
 
-(def map-preview-url "http://battlelog-cdn.battlefield.com/cdnprefix/9aa162d40ad4/public/base/bf3/map_images/30x21/")
+(def map-preview-url "http://battlelog-cdn.battlefield.com/cdnprefix/9aa162d40ad4/public/base/bf3/map_images/146x79/")
 
 (defn show-live-info [liveinfo]
-  [:div#info
-   [:style {:type "text/css"} (gaka/css [:#info
-                                                [:.team :float "left"
-                                                 :margin-right "25px"
-                                                 :width "430px"
-                                                 [:.score :float "right"
-                                                  [:.max :float "left"
-                                                   :font-size "12px"]
-                                                  [:.current :float "right"
-                                                   :font-weight "bold"
-                                                   :font-size "18px"
-                                                   :margin-top "-2px"]
-                                                  [:.bar :display "inline-block"
-                                                   :width "300px"
-                                                   :height "6px"
-                                                   :padding "1px"
-                                                   :margin "3px 5px"
-                                                   :border "1px solid #cccccc"
-                                                   [:span :float "right"
-                                                    :height "100%"
-                                                    :background-color "#000000"]
-                                                   [:.bleed
-                                                    :background-color "rgba(255, 0, 0, 0.33)"]
-                                                   [:.death
-                                                    :background-color "rgba(200, 0, 0, 0.55)"]]]
-                                                 [:.stats :clear :both
-                                                  [:* :display "inline-block"]
-                                                  [:span [:> [:* :margin "5px"]]
-                                                   [:h5 :margin "0px 0px 5px 5px"]]]
-                                                 [:tr :font-family "Arial"
-                                                  [:th
-                                                   :font-weight "normal"
-                                                   :font-size "12px" ]
-                                                  ["th:nth-child(3)" :text-align "left"
-                                                   :padding-left "8px"]
-                                                  [:td
-                                                   :border-top "1px solid #F2F2F2"
-                                                   :border-right "1px solid #F2F2F2"
-                                                   :padding "0 5px"
-                                                   :vertical-align "middle"
-                                                   :text-align "center"]
-                                                  [:span :margin "0 0 0 5px"]
-                                                  [:img :margin "-2px 0 0 0"]
-                                                  [:.tags :font-size "14px"]
-                                                  ["td:nth-child(2)"
-                                                   :background "#A8A7A6"
-                                                   :color "white"
-                                                   :font-weight "bold"
-                                                   :font-size "12px"
-                                                   :line-height "18px"
-                                                   :margin "5px"
-                                                   :padding "2px"
-                                                   :width "16px"
-                                                   :height "17px"
-                                                   :display "inline-block"
-                                                   :-webkit-border-radius "2px"
-                                                   :-moz-border-radius "2px"
-                                                   :border-radius "2px"]
-                                                  ["td:nth-child(3)" :width "300px"
-                                                   [:* :float "left"]]]
-                                                 [:tr.inactive :color "#CCCCCC"]]
-                                                [:#t2 [:.score :float "left"
-                                                       [:.max :float "right"]
-                                                       [:.bar [:span :float "left"]]
-                                                       [:.current :float "left"]]]] )]
+  [:div.livecontainer
    (for [team (partition-by :team (sort-by :team (:users liveinfo)))]
-     [:div.team {:id (str "t" (name (:team (first team))))}
-      ((fn [score]
-         [:div.score
-          [:span.max (:max score)]
-          (vector :span.bar
-                  [:span {:style (str "width:" (- (float (* 100 (/ (:current score) (:max score)))) 1) "%;")}]
-                  (when (:bleed score)
-                    [:span.death {:style (str "width:" (float (* 100 (/ (:bleed score) (:max score)))) "%;")}])
-                  (when (:deaths score)
-                    [:span.bleed {:style (str "width:"  (float (* 100 (/ (:deaths score) (:max score)))) "%;")}]))
-          [:span.current (:current score)]])
-       (get (:stats liveinfo) (:team (first team)) {}))
-      (into [:div.stats] (concat [[:h4 (char 0x03a3)]]
-                                 (map #(vector :span {:class  (name (first %))} [:h5 (name (first %)) ":"]
-                                               [:span (str (second %))])
-                                      (merge (dissoc (get (:stats liveinfo) (:team (first team)))
-                                                     :max :current)
-                                             {:players (count team)}))))
-      [:table
-       [:thead (into [:tr] (map #(vector :th %) ["#" "Sq" "Soldier Name" "K" "D" "Score"]))]
-       (into [:tbody]
-             (loop [users (reverse (sort-by :score team)) pos 1 res []]
-               (if (empty? users)
-                 res
-                 (recur
-                  (rest users)
-                  (inc pos)
-                  (conj res
-                        (into [:tr {:class (if (false? (:online (first users))) "inactive" "")}]
-                              (->> [ pos (if (< 0 (:squad (first users))) (char (+ 64 (:squad (first users)))) "")
-                                    (list (#(vector :img {:src (str rank-url (if (< 45 %) (str "ss" (- % 45))
-                                                                                 (str "r" %))  ".png")
-                                                          :height "23px" :width " 29px"})
-                                           (:rank (first users)))
-                                          [:span.tags (let [tags (:clanTags (first users))]
-                                                        (when (not-empty tags) (str "[" tags "]")))]
-                                          [:span.name (:personaName (first users))])
-                                    (:kills (first users))
-                                    (:deaths (first users)) (:score (first users))]
-                                   (map #(vector :td  (if (coll? %) % (str %)))))))))))]])])
+     (let [t (if (keyword? (:team (first team)))
+                                (:team (first team))
+                                (keyword (str (:team (first team)))))]
+       [:div.team {:id (str "t" (name (:team (first team))))}
+        ((fn [score]
+           [:div.score
+            [:span.max (:max score)]
+            (into [:span.bar]
+                  (letfn [(get-width [k] (if (or (= (:max score) 0) (= (get score k 0) 0)) 0
+                                             (- (float (* 100 (/ (k score) (:max score)))) 1)))]
+                    (concat (list [:span {:style (str "width:" (get-width :current) "%;")}])
+                            (if (re-find #"conquest" (s/lower-case (str (:gameMode liveinfo))))
+                              (list [:span.bleed {:style (str "width:"  (get-width :bleed) "%;")}]
+                                    [:span.death {:style (str "width:" (get-width :deaths) "%;")}])))))
+            [:span.current (:current score)]])
+         (get (:stats liveinfo) t {}))
+        (into [:div.stats] (concat [[:h4 (char 0x03a3)]]
+                                   (map #(vector :span {:class  (name (first %))} [:h5 (name (first %)) ":"]
+                                                 [:span (str (second %))])
+                                        (merge (dissoc (get (:stats liveinfo) t)
+                                                       :max :current)
+                                               {:players (count team)}))))
+        [:table
+         [:thead (into [:tr] (map #(vector :th %) ["#" "Sq" "Soldier Name" "K" "D" "Score"]))]
+         (into [:tbody]
+               (loop [users (reverse (sort-by :score team)) pos 1 res []]
+                 (if (empty? users)
+                   res
+                   (recur
+                    (rest users)
+                    (inc pos)
+                    (conj res
+                          (into [:tr {:class (if (false? (:online (first users))) "inactive" "")}]
+                                (->> [ pos (if (< 0 (:squad (first users))) (char (+ 64 (:squad (first users)))) "")
+                                      (list (#(vector :img {:src (str rank-url (if (< 45 %) (str "ss" (- % 45))
+                                                                                   (str "r" %))  ".png")
+                                                            :height "23px" :width " 29px"})
+                                             (:rank (first users)))
+                                            [:span.tags (let [tags (:clanTags (first users))]
+                                                          (when (not-empty tags) (str "[" tags "]")))]
+                                            [:span.name (:personaName (first users))])
+                                      (:kills (first users))
+                                      (:deaths (first users)) (:score (first users))]
+                                     (map #(vector :td  (if (coll? %) % (str %)))))))))))]]))
+   [:div.clear]])
 
 (defn show-battle-info [battle]
-  [[:style {:type "text/css"} (gaka/css
-                               [:.expansions :display "none"]
-                               [:.duration :display "block"])]
-   [:div (if-let [name (->> battle :server :info :name)]
-           name
-           (->> (:server battle) bl/server-info :server :name))]
-    [:div.map [:img {:src (str map-preview-url (s/lower-case (:map battle)) ".jpg")}]
+  [[:div.left
+    [:img {:src (str map-preview-url (s/lower-case (:map battle)) ".jpg")}]]
+   [:div.right
+    [:h3 (if-let [name (->> battle :server :name)]
+            name
+            (->> (:server battle) bl/server-info :server :name))]
+    [:div.map.left
      [:span.name (bl/maps (:map battle))]
      [:span.mode (bl/mapModes (:mapMode battle))]
      [:span.variant (cond (= 1 (:mapVariant battle)) "Tiny (16 player)"
                           true "")]]
-    [:div.time [:span.start [:span "start: "]
+    [:div.time.right [:span.start [:span "start: "]
                 (get-time-string (->> battle :time :start)) " utc"]
      [:span.end [:span "end: "] (get-time-string (->> battle :time :end)) " utc"]
      ;;TODO add relative to SBT
      [:span.duration [:span "duration: "]
       (->> (time/interval (clj-time.format/parse (->> battle :time :start))
                           (clj-time.format/parse (->> battle :time :end)))
-           get-interval-string)]]])
+           get-interval-string)]]]
+   [:div.clear]])
 
 (defpage  "/" [] (layout "BF3 Stuff"))
 (defpage  "/favicon.ico" [] "")
@@ -360,13 +406,14 @@
                                                           (map #(:origin-name %) )
                                                           (interpose "<br/>"))))))))))))
 
-(defn- get-battle [gameid & {:keys [start end] :or {start false end false}}]
+(defn- get-battle-page [gameid & {:keys [start end] :or {start false end false}}]
   (->> (client/get (str "http://work.dalkvist.se:8081/get-battle/" gameid
-                        "?host=" ((:headers (req/ring-request)) "host")
-                        (if start (str "&start=" start) "")
-                        (if end   (str "&end="   end) "'"))) :body))
+                        "?" (encode-params
+                             (merge {:host ((:headers (req/ring-request)) "host")}
+                                    (if start {:start start} {})
+                                    (if end   {:end end} {}))))) :body))
 
-(def battle (mem/memo-ttl get-battle *short-cache-time*))
+(def battle (mem/memo-ttl get-battle-page *short-cache-time*))
 
 (defpage "/battle/:gameid" {:keys [gameid start end]}
   (html5 (battle gameid :start start :end end)))
@@ -374,18 +421,18 @@
 
 (defpage "/get-battle/:gameid" {:keys [gameid start end host] :or {start false end false
                                                                    host ((:headers (req/ring-request)) "host")}}
-  (let [battle (first (bf3.info/battle-info (bf3.db/get-battle gameid :start start :end end)))]
-    (layout (when battle (list (into [:div.info]
-                                     (conj (show-battle-info battle)
-                                           [:a {:href (str "http://" host "/live/" (:server battle))}
-                                            "go live"]))
-                               (->> battle :live  (map bf3.info/parse-info)
-                                    bf3.info/merge-infos
-                                    show-live-info))))))
+  (let [logs (bf3.db/get-battle  gameid :start start :end end)
+        battle (->> logs  bf3.info/battle-info first)]
+    (battle-layout (when battle (list [:style {:type "text/css"} (gaka/css [:div.livecontainer :display "block"])]
+                                      (into [:div.info]
+                                            (conj (show-battle-info battle)
+                                                  [:a {:href (str "http://" host "/live/" (:server battle))}
+                                                   "go live"]))
+                                      (show-live-info (dissoc battle :live)))))))
 
 (defn- get-battles []
   (->> (client/get (str "http://work.dalkvist.se:8081/gc/battles/"
-                        "?host=" ((:headers (req/ring-request)) "host"))) :body))
+                        "?" (encode-params {:host ((:headers (req/ring-request)) "host")}))) :body))
 
 (def battles (mem/memo-ttl get-battles *short-cache-time*))
 
@@ -393,31 +440,48 @@
   (html5 (battles)))
 
 (defpage "/gc/battles/" {:keys [host] :or {host ((:headers (req/ring-request)) "host")}}
-  (layout [:style {:type "text/css"} (gaka/css [:.battles :float "left"
-                                                [:span :margin "0 1px"]
-                                                [:.user
-                                                 [:.name
-                                                  :width "210px"
-                                                  :display "inline-block"]]] )]
+  (battle-layout
+          (javascript-tag (str "$(document).ready(function(){"
+                               "$('a.toggle.users').click(function(){"
+                               "$(this).closest('li').find('ul.users').toggle(); return false});"
+                               "$('a.livescore').click(function(){"
+                               "var onlink = $(this); var offlink = $(this).parent().find('a.toggle.score');"
+                               " $.get($(this).attr('href'), function (response) {"
+                               "$(onlink).closest('li').find('.livecontainer')"
+                               ".replaceWith($('.livecontainer', response));"
+                               "$(onlink).closest('li').find('.livecontainer').toggle('true');"
+                               "$(onlink).toggle('false');$(offlink).toggle('true');"
+                               "});"
+                               "return false;});"
+                               "$('a.toggle.score').click(function(){"
+                               "$(this).toggle(); $(this).parent().find('a.livescore').toggle();"
+                               "$(this).closest('li').find('.livecontainer').toggle('false');"
+                               "return false;});"
+                               "});"))
           (into [:div#battles]
-                (for [btls (partition-by :server (battle-info))]
+                (for [btls (->> (battle-info)  (partition-by :server))]
                   (into [:ul.battles]
                         (for [battle  btls]
                           [:li.battle
                            (into [:div.info]
-                                 (conj (show-battle-info battle)
-                                       [:a {:href
-                                            (str "http://" host
-                                                 (if (or(= "work.dalkvist.se:8081" host) (= "localhost:8081" host)) "/get-battle/" "/battle/")
-                                                 (:gameId battle) "?start=" (-> battle :time :start)
-                                                 "&end="  (-> battle :time :end))}
-                                        "show score"]))
+                                 (concat (show-battle-info battle)
+                                         (list [:a {:class "livescore" :href
+                                                (str "http://" host
+                                                     (if (or(= "work.dalkvist.se:8081" host)
+                                                            (= "localhost:8081" host)) "/get-battle/" "/battle/")
+                                                     (:gameId battle) "?"
+                                                     (encode-params {:start (-> battle :time :start)
+                                                                     :end  (-> battle :time :end)}))}
+                                            "show score"]
+                                             [:a.toggle.score {:href ""} "hide score"])))
+                           [:div.livecontainer]
+                           [:a.toggle.users {:href ""} "toggle users"]
                            [:ul.users
-                            (for [user (->> (:users battle) (sort-by :clanTag)
-                                            (partition-by :clanTag)
+                            (for [user (->> (:users battle) (sort-by :clanTags)
+                                            (partition-by :clanTags)
                                             (mapcat #(sort-by :personaName %)))]
-                              [:li.user [:span.name (str (when-not (empty? (:clanTag user))
-                                                           (str "[" (:clanTag user) "]"))
+                              [:li.user [:span.name (str (when-not (empty? (:clanTags user))
+                                                           (str "[" (:clanTags user) "]"))
                                                          (:personaName user))]
                                [:span.expansions (bl/get-expansion-img (:expansions user) true)]])]
 
@@ -427,18 +491,19 @@
   (response/redirect "/live/" ))
 
 (defpage "/live/" {:keys [server]}
-  (layout (->> (if server server "87989727-762a-420f-8aab-48987c6a4dca")
-               bf3.bl/get-live-info bf3.info/parse-info show-live-info)))
+  (battle-layout (->> (if server server "87989727-762a-420f-8aab-48987c6a4dca")
+                      bf3.bl/get-live-info parse-info show-live-info)))
 
 (defpage "/live/:server" {:keys [server]}
-  (layout (->> (if server server "87989727-762a-420f-8aab-48987c6a4dca")
-               bf3.bl/get-live-info bf3.info/parse-info show-live-info)))
+  (battle-layout (->> (if server server "87989727-762a-420f-8aab-48987c6a4dca")
+                      bf3.bl/get-live-info parse-info show-live-info)))
 
 (defpage "/live/:server/.json" {:keys [server]}
-  (res/json (->> server bf3.bl/get-live-info bf3.info/parse-info )))
+  (res/json (->> server bf3.bl/get-live-info parse-info )))
 
-(defpage  "/gc/update" [] (layout [ (count (bl/save-live-users))
-                                    (count (ts/save-live-users))]))
+(defpage  "/gc/update" []
+  (layout (do (bl/save-live-users) (ts/save-live-users)
+              "loggin attendance on GC server")))
 
 (defpage "/gc/stalking" []
   (response/redirect "/stalking/gc"))

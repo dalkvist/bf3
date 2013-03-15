@@ -7,7 +7,8 @@
             [clj-time.format :as time-format])
   (:use [cheshire.core]
         [net.cgrand.enlive-html]
-        [bf3.db])
+        [bf3.db]
+        [bf3.info :only [parse-info]])
   (:import [java.net URI DatagramPacket DatagramSocket InetAddress]))
 
 (declare get-user get-live-info)
@@ -123,7 +124,7 @@
                   {:headers {"X-AjaxNavigation" "1"}})
       :body (parse-string true) :context))
 
-(def server-info (mem/memo-ttl get-server-info *cache-time*))
+(def server-info (mem/memo-ttl get-server-info *tiny-cache-time*))
 
 (def server-ids (hash-map
            :eu          "bc442e68-e072-4151-86da-cdba81c51cf5"
@@ -154,20 +155,15 @@
   "get user from the battlelog server"
   ([] (get-live-users (->> server-ids vals first)))
   ([id]
-     (let [info (server-info id)]
-                 (hash-map :time (get-current-iso-8601-date)
-                    :users (->> info :players
-                                (pmap #(-> (merge (select-keys (:persona %) [:personaName :personaId])
-                                                  (select-keys (get-in % [:persona :user]) [:userId :username])))))
-                    :server id
-                    :live (get-live-info (get-in info [:server :ip]) (get-in info [:server :port])
-                                         (get-in info [:server :gameId]))
-                    :info
-                    (merge (hash-map :vehicles (= 1 (get-in info [ :server :settings :vvsa])))
-                           (select-keys (:server info) [:hasPassword :gameId :map :mapMode :mapVariant
-                                                        :name :matchId]))))))
+     (let [info (server-info id)
+           live (get-live-info (get-in info [:server :ip]) (get-in info [:server :port])
+                                         (get-in info [:server :gameId]))]
+       (merge {:time (get-current-iso-8601-date) :server id :live live}
+              (hash-map :vehicles (= 1 (get-in info [ :server :settings :vvsa])))
+              (select-keys (:server info) [:hasPassword :gameId :map :mapMode :mapVariant :name :matchId])
+              (parse-info live)))))
 
-(def get-users (mem/memo-ttl get-live-users *short-cache-time*))
+(def get-users (mem/memo-ttl get-live-users *tiny-cache-time*))
 
 
 (defn- get-test-users [] (-> (client/get "http://bf3.herokuapp.com/gc/bl-users.json" )
@@ -235,10 +231,16 @@
            p
            ids))))
 
-(defn save-live-users []
-  (doseq [[server id] server-ids]
-    (let [info (get-users id)]
-      (when (:users info) (save-bl-user! info)))))
+(defn save-live-users
+  ([] (save-live-users (time/now)))
+  ([start]
+     (when (> 60 (time/in-secs (time/interval start (time/now))))
+       (doseq [[server id] server-ids]
+         (let [info (get-users id)]
+           (when (not-empty info) (save-bl-user! info))))
+       (when (> 45 (time/in-secs (time/interval start (time/now))))
+         (future (Thread/sleep 10000)
+                 (save-live-users start))))))
 
 (defn- get-platoon-info [id]
   (-> (client/get (str "http://battlelog.battlefield.com/bf3/platoon/" id "/listmembers/")

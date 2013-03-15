@@ -17,13 +17,11 @@
       (println "Initializing mongo @ " mongo-url)
       (mongo! :db (:db config) :host (:host config) :port (Integer. (:port config))) ;; Setup global mongo.
       (authenticate (:user config) (:pass config)) ;; Setup u/p.
-      (doseq [coll [:ts-users :bl-users]]
+      (doseq [coll [:ts-users :bl-logs :bl-users]]
         (or (collection-exists? coll);; Create collection if it doesn't exist.
             (do (create-collection! coll)
-                ;; (when (= coll :traderausers)
-                ;;   (mass-insert! coll default-users))
-                )))
-      )))
+                (when (= coll ::bl-logs)
+                  (add-index! :bl-logs [[:time -1]]) )))))))
 
 (defn- clean-users [user]
   (dissoc user :_id))
@@ -42,7 +40,7 @@
   ([descending]
      (maybe-init)
      (map clean-users
-          (fetch :bl-users :sort {:time (if descending -1 1)}
+          (fetch :bl-logs :sort {:time (if descending -1 1)}
                  :where {:$and [ {"live" {:$ne []}}
                                  {"live" {:$ne nil}}
                                  {"users" {:$ne []}}]}))))
@@ -51,21 +49,38 @@
   [gameid & {:keys [start end descending]
                :or {start false end false descending true}}]
   (maybe-init)
-  (map clean-users
-       (if (and end start)
-         (fetch :bl-users :sort {:time (if descending -1 1)}
-                :where {:$and  [
-                                {"live" {:$ne []}}
-                                {"users" {:$ne []}}
-                                {"info.gameId" gameid}
-                                {"time" {:$gte start
-                                         :$lte end}}]})
-         (fetch :bl-users :sort {:time (if descending -1 1)}
-                :where {:$and  [
-                                {"live" {:$ne []}}
-                                {"users" {:$ne []}}
-                                {"info.gameId" gameid}]}))))
+  (let [gameid (if (string? gameid)
+                 (Integer/parseInt gameid)
+                 gameid)]
+    (map clean-users
+         (if (and end start)
+           (fetch :bl-logs :sort {:time (if descending -1 1)}
+                  :where {:$and  [
+                                  {"live" {:$ne []}}
+                                  {"users" {:$ne []}}
+                                  {"gameId" gameid}
+                                  {"time" {:$gte (str start)
+                                           :$lte (str end)}}]})
+           (fetch :bl-logs :sort {:time (if descending -1 1)}
+                  :where {:$and  [
+                                  {"live" {:$ne []}}
+                                  {"users" {:$ne []}}
+                                  {"gameId" gameid}]})))))
 
-(defn save-bl-user! [bl-user]
+(defn get-log [serverid gameid ]
+  (fetch-one :bl-logs :sort {:time -1}
+             :where {:$and [ {"server" serverid}
+                             {"gameId" gameid}]}))
+
+(defn save-bl-user! [bl-log]
   (maybe-init)
-  (insert! :bl-users bl-user))
+  (let [old (get-log (:server bl-log) (:gameId (:info bl-log)))]
+    (if (and (not-empty old) (apply = (map #(dissoc % :time :lastupdate :_id) [old bl-log])))
+      (update! :bl-logs old (merge (assoc old :lastupdate (:time bl-log))))
+      (insert! :bl-logs bl-log))))
+
+(comment
+  (maybe-init)
+  (drop-coll! :bl-logs)
+  (create-collection! :bl-logs)
+  (add-index! :bl-logs [[:time -1]]))
