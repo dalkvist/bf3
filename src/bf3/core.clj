@@ -408,7 +408,7 @@
                                  (conj (show-battle-info battle)
                                        [:a {:href
                                             (str "http://" host
-                                                 (if (= "localhost:8081" host) "/get-battle/" "/battle/")
+                                                 (if (or(= "work.dalkvist.se:8081" host) (= "localhost:8081" host)) "/get-battle/" "/battle/")
                                                  (:gameId battle) "?start=" (-> battle :time :start)
                                                  "&end="  (-> battle :time :end))}
                                         "show score"]))
