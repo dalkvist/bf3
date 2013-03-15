@@ -18,6 +18,8 @@
 
 (def ^{:dynamic true} *short-cache-time* (* 1 60 1000))
 
+(def ^{:dynamic true} *tiny-cache-time* (* 10 1000))
+
 (def maps {
            "MP_001" "Grand Bazaar"
            "MP_003" "Teheran Highway"
@@ -322,4 +324,4 @@
             (take (.getLength pong))
             (map identity)))))
 
-(def get-live-info (mem/memo-ttl live-info (/ *short-cache-time* 2)))
+(def get-live-info (mem/memo-ttl live-info *tiny-cache-time*))

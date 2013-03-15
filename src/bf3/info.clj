@@ -36,7 +36,7 @@
              name (parse-hex (take  (first postid) (drop 1 postid)))
              postname  (drop (inc (first postid)) postid)
              taglength (first postname)
-             clanTags (if (= 0 taglength) "" (parse-hex (take taglength (drop 1 postname))))
+             clanTags (if (= 0 taglength) "" (str (parse-hex (take taglength (drop 1 postname)))))
              posttags (drop (inc taglength) postname)
              rank (first posttags)
              info (let [info (take 14 (drop 1 posttags))]
