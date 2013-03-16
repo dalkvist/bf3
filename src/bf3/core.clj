@@ -458,7 +458,9 @@
 
   (html5 (battles)))
 
-(defpage "/gc/battles/" {:keys [host server] :or {server false host ((:headers (req/ring-request)) "host")}}
+(defpage "/gc/battles/" {:keys [testservers host server] :or {testservers false
+                                                             server false
+                                                             host ((:headers (req/ring-request)) "host")}}
   (battle-layout
           (javascript-tag (str "$(document).ready(function(){"
                                "$('a.toggle.users').click(function(){"
@@ -482,6 +484,8 @@
                   (into [:ul.battles]
                         (for [battle  btls]
                           (when (and (or (false? server) (= server (:server battle)))
+                                     (or (true? testservers)
+                                         (some #(= % (:server battle)) (vals bf3.bl/server-ids)))
                                      (< 15 (count (:live battle))))
                             [:li.battle
                              (into [:div.info]
