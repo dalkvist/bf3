@@ -26,8 +26,9 @@
             [clj-time.format :as time-format]
             [clj-time.coerce :as time-cc]))
 
-
+(def ^{:dynamic true} *tiny-cache-time* (* 10 1000))
 (def ^{:dynamic true} *short-cache-time* (* 59 1000))
+(def ^{:dynamic true} *extra-long-cache-time* (* 12 60 60 1000))
 
 
 (defn get-time-string [t]
@@ -287,7 +288,7 @@
 
 (def map-preview-url "http://battlelog-cdn.battlefield.com/cdnprefix/9aa162d40ad4/public/base/bf3/map_images/146x79/")
 
-(defn show-live-info [liveinfo]
+(defn get-show-live-info [liveinfo]
   [:div.livecontainer
    (for [team (partition-by :team (sort-by :team (:users liveinfo)))]
      (let [t (if (keyword? (:team (first team)))
@@ -336,9 +337,18 @@
                                      (map #(vector :td  (if (coll? %) % (str %)))))))))))]]))
    [:div.clear]])
 
-(defn show-battle-info [battle]
+
+(def show-live-info-long (mem/memo-ttl get-show-live-info *extra-long-cache-time*))
+(def show-live-info-short (mem/memo-ttl get-show-live-info *tiny-cache-time*))
+
+(defn show-live-info [battle]
+  (if (< 2 (time/mins-ago (time-format/parse (:end (:time battle)))))
+    (show-live-info-long battle)
+    (show-live-info-short battle)))
+
+(defn get-battle-info [battle]
   [[:div.left
-    [:img {:src (str map-preview-url (s/lower-case (:map battle)) ".jpg")}]]
+    [:img {:src (str map-preview-url (s/lower-case (get battle :map "")) ".jpg")}]]
    [:div.right
     [:h3 (if-let [name (->> battle :server :name)]
             name
@@ -357,6 +367,14 @@
                           (clj-time.format/parse (->> battle :time :end)))
            get-interval-string)]]]
    [:div.clear]])
+
+(def show-battle-info-long (mem/memo-ttl get-battle-info *extra-long-cache-time*))
+(def show-battle-info-short (mem/memo-ttl get-battle-info *short-cache-time*))
+
+(defn show-battle-info [battle]
+  (if (< 2 (time/mins-ago (time-format/parse (:end (:time battle)))))
+    (show-battle-info-long battle)
+    (show-battle-info-short battle)))
 
 (defpage  "/" [] (layout "BF3 Stuff"))
 (defpage  "/favicon.ico" [] "")
@@ -437,9 +455,10 @@
 (def battles (mem/memo-ttl get-battles *short-cache-time*))
 
 (defpage "/gc/battles" []
+
   (html5 (battles)))
 
-(defpage "/gc/battles/" {:keys [host] :or {host ((:headers (req/ring-request)) "host")}}
+(defpage "/gc/battles/" {:keys [host server] :or {server false host ((:headers (req/ring-request)) "host")}}
   (battle-layout
           (javascript-tag (str "$(document).ready(function(){"
                                "$('a.toggle.users').click(function(){"
@@ -459,33 +478,35 @@
                                "return false;});"
                                "});"))
           (into [:div#battles]
-                (for [btls (->> (battle-info)  (partition-by :server))]
+                (for [btls (->> (battle-info) (partition-by :server))]
                   (into [:ul.battles]
                         (for [battle  btls]
-                          [:li.battle
-                           (into [:div.info]
-                                 (concat (show-battle-info battle)
-                                         (list [:a {:class "livescore" :href
-                                                (str "http://" host
-                                                     (if (or(= "work.dalkvist.se:8081" host)
-                                                            (= "localhost:8081" host)) "/get-battle/" "/battle/")
-                                                     (:gameId battle) "?"
-                                                     (encode-params {:start (-> battle :time :start)
-                                                                     :end  (-> battle :time :end)}))}
-                                            "show score"]
-                                             [:a.toggle.score {:href ""} "hide score"])))
-                           [:div.livecontainer]
-                           [:a.toggle.users {:href ""} "toggle users"]
-                           [:ul.users
-                            (for [user (->> (:users battle) (sort-by :clanTags)
-                                            (partition-by :clanTags)
-                                            (mapcat #(sort-by :personaName %)))]
-                              [:li.user [:span.name (str (when-not (empty? (:clanTags user))
-                                                           (str "[" (:clanTags user) "]"))
-                                                         (:personaName user))]
-                               [:span.expansions (bl/get-expansion-img (:expansions user) true)]])]
+                          (when (and (or (false? server) (= server (:server battle)))
+                                     (< 15 (count (:live battle))))
+                            [:li.battle
+                             (into [:div.info]
+                                   (concat ( show-battle-info battle)
+                                           (list [:a {:class "livescore" :href
+                                                      (str "http://" host
+                                                           (if (or(= "work.dalkvist.se:8081" host)
+                                                                  (= "localhost:8081" host)) "/get-battle/" "/battle/")
+                                                           (:gameId battle) "?"
+                                                           (encode-params {:start (-> battle :time :start)
+                                                                           :end  (-> battle :time :end)}))}
+                                                  "show score"]
+                                                 [:a.toggle.score {:href ""} "hide score"])))
+                             [:div.livecontainer]
+                             (comment [:a.toggle.users {:href ""} "toggle users"]
+                                      [:ul.users
+                                       (for [user (->> (:users battle) (sort-by :clanTags)
+                                                       (partition-by :clanTags)
+                                                       (mapcat #(sort-by :personaName %)))]
+                                         [:li.user [:span.name (str (when-not (empty? (:clanTags user))
+                                                                      (str "[" (:clanTags user) "]"))
+                                                                    (:personaName user))]
+                                          [:span.expansions (bl/get-expansion-img (:expansions user) true)]])])
 
-                           ]))))))
+                             ])))))))
 
 (defpage "/live" []
   (response/redirect "/live/" ))
