@@ -200,6 +200,7 @@
                                                     [:div [:> [:span :display "block"]]]]
                                                    [:span :margin "0 1px"]
                                                    [:a.toggle.score :display "none"]
+                                                   [:.livecontainer :display "none"]
                                                    [:ul.users :display :none
                                                     [:.user
                                                      [:.name
@@ -209,7 +210,6 @@
                                                 [:.duration :display "block"]
                                                 [:a.toggle.users :display "none"]
                                                 [:.livecontainer
-                                                 :display "none"
                                                  :background-color "#fff"
                                                  :padding "10px"
                                                  :margin "10px 0"
