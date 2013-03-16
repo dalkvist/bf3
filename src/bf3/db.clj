@@ -67,6 +67,11 @@
                                   {"users" {:$ne []}}
                                   {"gameId" gameid}]})))))
 
+(defn get-battles-by-server [server-id]
+  (do (maybe-init)
+      (map clean-users
+           (fetch :bl-logs :where (hash-map :$and [ {:server server-id}])))))
+
 (defn get-log [serverid gameid ]
   (fetch-one :bl-logs :sort {:time -1}
              :where {:$and [ {"server" serverid}
