@@ -190,9 +190,15 @@
           (partition-by :server)
           (map #(sort-by :time (fn [t1 t2] (time/after? (time-format/parse t1) (time-format/parse t2))) %))
           (mapcat #(partition-by
-                    (fn [b] (str (:gameId b) (:currentMap b) (:gameMode b) (:mapVariant b) (:vehicles b) (:mapMode b))) %)))))
+                    (fn [b] (str (:gameId b) (:currentMap b) (:gameMode b) (:mapVariant b)
+                                (:vehicles b) (:mapMode b)
+                                  (some (fn [[t s]] (apply = (vals (select-keys s [:max :current]))))
+                                        (:stats b)))) %))
+          (filter #(< 15 (count %))))))
 
 (comment
+
+
   (some (fn [[team score]]
           (and (re-find #"conquest" (s/lower-case (str (:name b))))
                (or (= 0 (:current score))
