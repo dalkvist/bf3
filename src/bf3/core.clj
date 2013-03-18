@@ -486,7 +486,8 @@
                           (when (and (or (false? server) (= server (:server battle)))
                                      (or (true? testservers)
                                          (some #(= % (:server battle)) (vals bf3.bl/server-ids)))
-                                     (< 15 (count (:live battle))))
+                                     (< 15 (count (:live battle)))
+                                     (< 1 (count (:users battle))))
                             [:li.battle
                              (into [:div.info]
                                    (concat ( show-battle-info battle)
