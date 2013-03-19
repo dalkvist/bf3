@@ -284,7 +284,7 @@
                                                         [:.current :float "left"]]]] )]
            content))
 
-(def rank-url "http://battlelog-cdn.battlefield.com/cdnprefix/14d47a6313f99/public/profile/bf3/stats/ranks/tiny/")
+(def rank-url "http://battlelog-cdn.battlefield.com/cdnprefix/14d47a6313f98/public/profile/bf3/stats/ranks/tiny/")
 
 (def map-preview-url "http://battlelog-cdn.battlefield.com/cdnprefix/9aa162d40ad4/public/base/bf3/map_images/146x79/")
 
@@ -325,9 +325,9 @@
                     (conj res
                           (into [:tr {:class (if (false? (:online (first users))) "inactive" "")}]
                                 (->> [ pos (if (< 0 (:squad (first users))) (char (+ 64 (:squad (first users)))) "")
-                                      (list (#(vector :img {:src (str rank-url (if (< 45 %) (str "ss" (- % 45))
-                                                                                   (str "r" %))  ".png")
-                                                            :height "23px" :width " 29px"})
+                                      (list (#(when (< % 146) (vector :img {:src (str rank-url (if (< 45 %)  (str "ss" (- % 45))
+                                                                                                   (str "r" %))  ".png")
+                                                                             :height "23px" :width " 29px"}))
                                              (:rank (first users)))
                                             [:span.tags (let [tags (:clanTags (first users))]
                                                           (when (not-empty tags) (str "[" tags "]")))]
