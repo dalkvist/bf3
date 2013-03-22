@@ -521,8 +521,13 @@
                       bf3.bl/get-live-info parse-info show-live-info)))
 
 (defpage "/live/:server" {:keys [server]}
-  (battle-layout (->> (if server server "87989727-762a-420f-8aab-48987c6a4dca")
-                      bf3.bl/get-live-info parse-info show-live-info)))
+  (battle-layout (list (javascript-tag (str "var runUpdate = true;"
+                                            "var update = function(){$.get(window.location.protocol + \"//\" + window.location.host + window.location.pathname,"
+                                            "function(res){if($('.livecontainer',res).children().length > 1){$('.livecontainer').replaceWith($('.livecontainer', res).first());}});"
+                                            "if(runUpdate){ window.setTimeout(update, 10 * 1000);};};"
+                                            "update();"))
+                       (->> (if server server "87989727-762a-420f-8aab-48987c6a4dca")
+                            bf3.bl/get-live-info parse-info show-live-info))))
 
 (defpage "/live/:server/.json" {:keys [server]}
   (res/json (->> server bf3.bl/get-live-info parse-info )))
