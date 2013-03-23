@@ -9,7 +9,7 @@
         [net.cgrand.enlive-html]
         [bf3.db]
         [bf3.info :only [parse-info]])
-  (:import [java.net URI DatagramPacket DatagramSocket InetAddress]))
+  (:import [java.net URI DatagramPacket DatagramSocket InetAddress MulticastSocket]))
 
 (declare get-user get-live-info)
 
