@@ -279,7 +279,7 @@
      (live-info server-ip server-port game-id default-dest-port))
   ([server-ip server-port game-id dest-port]
      (try
-       (let [socket (DatagramSocket. dest-port)
+       (let [socket (MulticastSocket. dest-port)
              info (live-info server-ip server-port game-id dest-port socket)]
          (.close socket)
          info)
@@ -303,6 +303,7 @@
           ping (DatagramPacket. msg (count msg) ip server-port)
           pong (DatagramPacket. (byte-array 16384) 16384)
           ]
+       (.setTimeToLive socket 125)
        (.setSoTimeout socket 1000)
        (.send socket ping)
        (.disconnect socket)
