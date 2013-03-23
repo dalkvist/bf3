@@ -34,5 +34,4 @@
   :jvm-opts ["-Xms350m" "-Xmx350m" "-server" "-XX:+UseConcMarkSweepGC"
              "-XX:+CMSIncrementalMode" "-XX:+UseCompressedOops"
              "-XX:+DoEscapeAnalysis" "-XX:+UseBiasedLocking"
-             "-XX:PermSize=64M" "-XX:MaxPermSize=85M"
-             "-Djava.net.preferIPv4Stack=true"])
+             "-XX:PermSize=64M" "-XX:MaxPermSize=85M"])
