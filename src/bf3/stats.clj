@@ -98,7 +98,7 @@
   (filter #(time/overlaps? (get-battleday :weeks weeks)
                            (stat-interval %)) stats))
 
-g(defn- get-active-users [stats]
+(defn- get-active-users [stats]
   (->> stats (map :user) distinct (pmap #(->> % bl/get-username ))
        (filter #(not-empty %))))
 
