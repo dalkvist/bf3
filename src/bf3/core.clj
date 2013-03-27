@@ -16,6 +16,7 @@
             [clojure.string :as s]
             [gaka [core :as gaka]]
             [bf3.bl :as bl]
+            [bf3.redis :as redis]
             [clj-http.client :as client]
             [clojure.core.memoize :as mem]
             [clj-time.core :as time]
@@ -354,11 +355,23 @@
 (defpage  "/gc/" [] (layout "GC stuff"))
 
 (defn- get-battle-page [gameid & {:keys [start end] :or {start false end false}}]
-  (->> (client/get (str "http://work.dalkvist.se:8081/get-battle/" gameid
-                        "?" (encode-params
-                             (merge {:host ((:headers (req/ring-request)) "host")}
-                                    (if start {:start start} {})
-                                    (if end   {:end end} {}))))) :body))
+  (let [id (str "gc-battle" gameid start end)
+        data (redis/get-data id)
+        save (fn [] (redis/set-data
+                    id
+                    {:time (+ *short-cache-time* (clj-time.coerce/to-long (clj-time.core/now)))
+                     :data (->> (client/get (str "http://work.dalkvist.se:8081/get-battle/" gameid
+                                                 "?" (encode-params
+                                                      (merge {:host ((:headers (req/ring-request)) "host")}
+                                                             (if start {:start start} {})
+                                                             (if end   {:end end} {}))))) :body)}))]
+    (if (or (not data) (nil? (:data data)) (empty? (:data data)))
+      (do (save)
+          (:data (redis/get-data id)))
+      (do (when (and (number? (:time data))
+                     (> (clj-time.coerce/to-long (clj-time.core/now)) (:time data)))
+            (future (save)))
+          (:data data)))))
 
 (def battle (mem/memo-ttl get-battle-page *short-cache-time*))
 
@@ -376,10 +389,17 @@
                                                   [:a {:href (str "http://" host "/live/" (:server battle))}
                                                    "go live"]))
                                       (show-live-info (dissoc battle :live)))))))
-
 (defn- get-battles []
-  (->> (client/get (str "http://work.dalkvist.se:8081/gc/battles/"
-                        "?" (encode-params {:host ((:headers (req/ring-request)) "host")}))) :body))
+  (let [data (redis/get-data "gc-battles")]
+    (when (or (not data) (and (number? (:time data))
+                              (> (clj-time.coerce/to-long (clj-time.core/now)) (:time data))))
+      (future (redis/set-data
+               "gc-battles"
+               {:time (+ *short-cache-time* (clj-time.coerce/to-long (clj-time.core/now)))
+                :data (->> (client/get (str "http://work.dalkvist.se:8081/gc/battles/"
+                                      "?" (encode-params {:host (get (:headers (req/ring-request)) "host" "")})))
+                     :body)})))
+    (:data data)))
 
 (def battles (mem/memo-ttl get-battles *short-cache-time*))
 
