@@ -518,9 +518,9 @@
   (fn [request]
     (let [resp (handler request)]
       (if (= (:uri request) "/gc/battles")
-        (assoc-in resp [:headers "Cache-Control"] "max-age=60")
+        (assoc-in resp [:headers "Cache-Control"] "public; max-age=60")
         (if (re-find #"^/live/" (:uri request))
-          (assoc-in resp [:headers "Cache-Control"] "max-age=10")
+          (assoc-in resp [:headers "Cache-Control"] "public; max-age=10")
           resp)))))
 
 (server/add-middleware cache-battles)
