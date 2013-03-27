@@ -43,6 +43,8 @@
              info (let [info (take 14 (drop 1 posttags))]
                      (merge (->> info
                                    (map #(Integer/toHexString %))
+                                   (map #(if (and (not= "0" %) (= 1 (count %)))
+                                           (str "0" %) %))
                                    (#(vector (take 4 %) (take 2 (drop 4 %)) (take 2 (drop 6 %))))
                                    (map #(reduce str %))
                                    (map #(Integer/parseInt % 16))
