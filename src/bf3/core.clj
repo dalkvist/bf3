@@ -4,11 +4,9 @@
         noir.core
         hiccup.core
         hiccup.page-helpers
-        [bf3.bf3stats :only [random-loadout]]
         [bf3.db :only [get-ts-users get-bl-users get-battle]]
         [bf3.info :only[battle-info parse-info merge-infos]]
         [bf3.stats :only [get-stats battleday-roster get-battleday]]
-        [bf3.ki :only [ki-players get-ta-info get-ki-info]]
         [cheshire.core :only [encode generate-string]])
   (:require (compojure [route :as route])
             (ring.util [response :as response])
@@ -65,32 +63,6 @@
      [:div#wrapper
       content
       ]]))
-
-(defpartial kit-wrapper [& content]
-  (layout
-   [:div#alphaInfo
-    [:b "Simple battlefield 3 loadout randomizer"]
-    [:p "use bf3.herokuapp.com for random loadout with all unlocks, inc all attachments"]
-    [:p "or use bf3.herokuapp.com/YOURSOLDIER "
-     "for a loadout with only the stuff you have unlocked"]
-    [:p "use bf3.herokuapp.com/YOURSOLDIER?pdw=true&shotguns=true"
-     "if you whant to use pdw and/or shoutguns"]
-    [:p "you need to manually call an update on bf3stats.com"]]
-   [:div#content content]
-   [:div#todo [:b "todo"]
-    (unordered-list ["design ;)"
-                     [:div {:style "text-decoration: line-through;"}
-                      "fix attachments on PDWs (some have attachments on diferent slots then the main weapons)"]
-                     "vehicles" "configuration:"
-                     (unordered-list ["classes"
-                                      "prefere weapons/classes without 1/5 service star(s)"
-                                      "prefere weapons with unlocked attachments"
-                                      [:div {:style "text-decoration: line-through;"} "PWDs"]])
-
-                     "add update call to bf3stats"
-                     "squad loadouts"])]
-   [:div#fotter
-    [:p "data from bf3stats.com"]]))
 
 (defpartial stalking-layout [platoones & content]
     (layout  [:style {:type "text/css"} (gaka/css [:div#servers
@@ -379,28 +351,9 @@
 (defpage  "/" [] (layout "BF3 Stuff"))
 (defpage  "/favicon.ico" [] "")
 
-(defpage "/kit" []
-  (response/redirect "/kit/"))
-(defpage  "/kit/" [] (kit-wrapper (random-loadout)))
-(defpage  "/kit/:player" {player :player pdw :pdw shotguns :shotguns kit :class}
-  (kit-wrapper (random-loadout player :pdw pdw :shotguns shotguns :kit kit)))
-
 (defpage "/gc" []
   (response/redirect "/gc/"))
 (defpage  "/gc/" [] (layout "GC stuff"))
-
-(defpage  "/gc/ts-users.json" [] (res/json (get-ts-users)))
-(defpage  "/gc/ts-stats.json" [] (res/json (get-stats (get-ts-users))))
-(defpage  "/gc/ts-stats/:player.json" [player]
-  (res/json (first (filter (fn [[key]] (= key player)) (get-stats (get-ts-users))))))
-
-(defpage  "/gc/bl-users.json" [] (res/json (get-bl-users)))
-(defpage  "/gc/bl-stats.json" [] (res/json (get-stats (get-bl-users))))
-(defpage  "/gc/bl-stats/:player.json" [player]
-  (res/json (first (filter (fn [[key]] (or (some #(= key (:personaId %))
-                                                (bl/get-user player))
-                                          (= key player)))
-                           (get-stats (get-bl-users))))))
 
 (defpage  "/gc/roster" []
   (let [roster (battleday-roster (get-stats (get-bl-users)))]
@@ -577,7 +530,6 @@
     (link-to "http://www.global-conflict.org/viewtopic.php?f=3&t=16475" "How to sign up for the platoons")]
    [:small "Inspired by " (link-to "https://stalkdice.ep.io/" "stalk dice")]
     ))
-
 
 (defpage "/stalking/dice" []
   (stalking-layout
