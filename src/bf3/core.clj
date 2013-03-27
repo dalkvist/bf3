@@ -6,7 +6,6 @@
         hiccup.page-helpers
         [bf3.db :only [get-ts-users get-bl-users get-battle]]
         [bf3.info :only[battle-info parse-info merge-infos]]
-        [bf3.stats :only [get-stats battleday-roster get-battleday]]
         [cheshire.core :only [encode generate-string]])
   (:require (compojure [route :as route])
             (ring.util [response :as response])
@@ -16,7 +15,6 @@
             [noir.server :as server]
             [clojure.string :as s]
             [gaka [core :as gaka]]
-            [bf3.ts :as ts]
             [bf3.bl :as bl]
             [clj-http.client :as client]
             [clojure.core.memoize :as mem]
@@ -355,28 +353,6 @@
   (response/redirect "/gc/"))
 (defpage  "/gc/" [] (layout "GC stuff"))
 
-(defpage  "/gc/roster" []
-  (let [roster (battleday-roster (get-stats (get-bl-users)))]
-    (layout [:h1 "roster for battleday " (get-battleday)]
-            (into [:div#roster]
-                  (for [server roster]
-                    (list [:h2 (str "server " (->> (filter #(= (last %) (->> server :server)) bl/server-ids)
-                                                   first key))]
-                          (->> (:users server)
-                               (map #(if (get-ki-info %)
-                                       (hash-map :origin-name % :army "KI")
-                                       (if (get-ta-info %)
-                                         (hash-map :origin-name % :army "TA")
-                                         (hash-map :origin-name % :army "HiT (not ki or ta)")
-                                         )))
-                               (sort-by :army)
-                               (partition-by :army)
-                               reverse
-                               (map (fn [army]  (list [:h3 (->> army first :army)]
-                                                     (->> army
-                                                          (map #(:origin-name %) )
-                                                          (interpose "<br/>"))))))))))))
-
 (defn- get-battle-page [gameid & {:keys [start end] :or {start false end false}}]
   (->> (client/get (str "http://work.dalkvist.se:8081/get-battle/" gameid
                         "?" (encode-params
@@ -486,7 +462,7 @@
   (res/json (->> server bf3.bl/get-live-info parse-info )))
 
 (defpage  "/gc/update" []
-  (layout (do (bl/save-live-users) (ts/save-live-users)
+  (layout (do (bl/save-live-users)
               "loggin attendance on GC server")))
 
 (defpage "/gc/stalking" []
