@@ -2,12 +2,11 @@
   (:require [taoensso.carmine :as car]))
 
 (defn- get-redis-uri []
-  (get (System/getenv) "REDISCLOUD_URL" "redis://"))
+  (get (System/getenv) "REDISCLOUD_URL"))
 
-(def pool (car/make-conn-pool))
-(def spec1 (car/make-conn-spec :uri (get-redis-uri)))
-
-(defmacro wcar [& body] `(car/with-conn pool spec1 ~@body))
+(defmacro wcar [& body] `(car/with-conn (car/make-conn-pool)
+                             (car/make-conn-spec :uri (get-redis-uri))
+                           ~@body))
 
 (defn set-data [key data]
   (do (wcar (car/ping)
