@@ -23,7 +23,7 @@
             [clj-time.format :as time-format]
             [clj-time.coerce :as time-cc]))
 
-(def ^{:dynamic true} *tiny-cache-time* (* 10 1000))
+(def ^{:dynamic true} *tiny-cache-time* (* 9 1000))
 (def ^{:dynamic true} *short-cache-time* (* 59 1000))
 (def ^{:dynamic true} *extra-long-cache-time* (* 12 60 60 1000))
 
@@ -476,7 +476,6 @@
           (:data (redis/get-data id)))
       (do (when (and (number? (:time data))
                      (> (clj-time.coerce/to-long (clj-time.core/now)) (:time data)))
-            (println "live saving " server)
             (future (save)))
           (:data data)))))
 
@@ -486,7 +485,7 @@
   (html5 (live server) ))
 
 (def live-js (javascript-tag (str "var runUpdate = true;"
-                                  "var update = function(){$.get(window.location.protocol + \"//\" + window.location.host + window.location.pathname  + window.location.href,"
+                                  "var update = function(){$.get(window.location.href,"
                                   "function(res){if($('.livecontainer',res).children().length > 1){$('.livecontainer').replaceWith($('.livecontainer', res).first());}});"
                                   "if(runUpdate){ window.setTimeout(update, 10 * 1000);};};"
                                   "update();")))
