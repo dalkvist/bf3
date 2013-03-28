@@ -462,20 +462,51 @@
 
                              ])))))))
 
-(defpage "/live" []
-  (response/redirect "/live/" ))
+(defn- get-live [server]
+  (let [id (str "live" server)
+        data (redis/get-data id)
+        save #(redis/set-data
+               id
+               {:time (+ *tiny-cache-time* (clj-time.coerce/to-long (clj-time.core/now)))
+                :data (->> (client/get (str "http://work.dalkvist.se:8081/live/" server))
+                           :body)})]
+
+    (if (or (not data) (nil? (:data data)) (empty? (:data data)))
+      (do (save)
+          (:data (redis/get-data id)))
+      (do (when (and (number? (:time data))
+                     (> (clj-time.coerce/to-long (clj-time.core/now)) (:time data)))
+            (println "live saving " server)
+            (future (save)))
+          (:data data)))))
+
+(def live (mem/memo-ttl get-live 2000))
+
+(defpage "/live" {:keys [server] :or {server "eu"}}
+  (html5 (live server) ))
+
+(def live-js (javascript-tag (str "var runUpdate = true;"
+                                  "var update = function(){$.get(window.location.protocol + \"//\" + window.location.host + window.location.pathname  + window.location.href,"
+                                  "function(res){if($('.livecontainer',res).children().length > 1){$('.livecontainer').replaceWith($('.livecontainer', res).first());}});"
+                                  "if(runUpdate){ window.setTimeout(update, 10 * 1000);};};"
+                                  "update();")))
 
 (defpage "/live/" {:keys [server]}
-  (battle-layout (->> (if server server "87989727-762a-420f-8aab-48987c6a4dca")
-                      bf3.bl/get-live-info parse-info show-live-info)))
+  (battle-layout (list live-js
+                       (->> (if server (condp = server
+                                         "eu" :eu
+                                         "na" :na-new-york
+                                         server)
+                                "87989727-762a-420f-8aab-48987c6a4dca")
+                            bf3.bl/get-live-info parse-info show-live-info))))
 
 (defpage "/live/:server" {:keys [server]}
-  (battle-layout (list (javascript-tag (str "var runUpdate = true;"
-                                            "var update = function(){$.get(window.location.protocol + \"//\" + window.location.host + window.location.pathname,"
-                                            "function(res){if($('.livecontainer',res).children().length > 1){$('.livecontainer').replaceWith($('.livecontainer', res).first());}});"
-                                            "if(runUpdate){ window.setTimeout(update, 10 * 1000);};};"
-                                            "update();"))
-                       (->> (if server server "87989727-762a-420f-8aab-48987c6a4dca")
+  (battle-layout (list live-js
+                       (->> (if server (condp = server
+                                         "eu" :eu
+                                         "na" :na-new-york
+                                         server)
+                                "87989727-762a-420f-8aab-48987c6a4dca")
                             bf3.bl/get-live-info parse-info show-live-info))))
 
 (defpage "/live/:server/.json" {:keys [server]}
