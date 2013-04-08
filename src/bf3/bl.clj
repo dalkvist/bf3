@@ -127,7 +127,9 @@
 (def server-info (mem/memo-ttl get-server-info *tiny-cache-time*))
 
 (def server-ids {:na-new-york "2da0845c-463d-4452-93ab-51294898474d"
-                 :eu "bc442e68-e072-4151-86da-cdba81c51cf5"})
+                 :na2 "708a3998-299d-42b9-b7d0-7416cd92fedf"
+                 :eu "bc442e68-e072-4151-86da-cdba81c51cf5"
+                 :eu2 "f99a1eec-1a53-47c5-935c-d2d1ba86f3c9"})
 
 (def gc-platoones (hash-map :p1 "2832655391300768492" :p2 "2832655391533545956" :p3 "2832655391785121883"))
 
