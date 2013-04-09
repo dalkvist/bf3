@@ -5,7 +5,8 @@
         hiccup.core
         hiccup.page-helpers
         [bf3.db :only [get-ts-users get-bl-users get-battle]]
-        [bf3.info :only[battle-info parse-info merge-infos]]
+        [bf3.live :only [parse-info]]
+        [bf3.info :only [battle-info merge-infos]]
         [cheshire.core :only [encode generate-string]])
   (:require (compojure [route :as route])
             (ring.util [response :as response])
@@ -382,7 +383,7 @@
 (defpage "/get-battle/:gameid" {:keys [gameid start end host] :or {start false end false
                                                                    host ((:headers (req/ring-request)) "host")}}
   (let [logs (bf3.db/get-battle  gameid :start start :end end)
-        battle (->> logs  bf3.info/battle-info first)]
+        battle (-> (bf3.info/battle-info :logs logs) first)]
     (battle-layout (when battle (list [:style {:type "text/css"} (gaka/css [:div.livecontainer :display "block"])]
                                       (into [:div.info]
                                             (conj (show-battle-info battle)
@@ -407,60 +408,61 @@
 
   (html5 (battles)))
 
-(defpage "/gc/battles/" {:keys [testservers host server] :or {testservers false
-                                                             server false
-                                                             host ((:headers (req/ring-request)) "host")}}
+(defpage "/gc/battles/:weeks" {:keys [testservers host server weeks] :or {testservers false
+                                                                   server false
+                                                                   host ((:headers (req/ring-request)) "host")
+                                                                   weeks 0}}
   (battle-layout
-          (javascript-tag (str "$(document).ready(function(){"
-                               "$('a.toggle.users').click(function(){"
-                               "$(this).closest('li').find('ul.users').toggle(); return false});"
-                               "$('a.livescore').click(function(){"
-                               "var onlink = $(this); var offlink = $(this).parent().find('a.toggle.score');"
-                               " $.get($(this).attr('href'), function (response) {"
-                               "$(onlink).closest('li').find('.livecontainer')"
-                               ".replaceWith($('.livecontainer', response));"
-                               "$(onlink).closest('li').find('.livecontainer').toggle('true');"
-                               "$(onlink).toggle('false');$(offlink).toggle('true');"
-                               "});"
-                               "return false;});"
-                               "$('a.toggle.score').click(function(){"
-                               "$(this).toggle(); $(this).parent().find('a.livescore').toggle();"
-                               "$(this).closest('li').find('.livecontainer').toggle('false');"
-                               "return false;});"
-                               "});"))
-          (into [:div#battles]
-                (for [btls (->> (battle-info) (partition-by :server))]
-                  (into [:ul.battles]
-                        (for [battle  btls]
-                          (when (and (or (false? server) (= server (:server battle)))
-                                     (or (true? testservers)
-                                         (some #(= % (:server battle)) (vals bf3.bl/server-ids)))
-                                     (< 15 (count (:live battle)))
-                                     (< 1 (count (:users battle))))
-                            [:li.battle
-                             (into [:div.info]
-                                   (concat ( show-battle-info battle)
-                                           (list [:a {:class "livescore" :href
-                                                      (str "http://" host
-                                                           (if (or(= "work.dalkvist.se:8081" host)
-                                                                  (= "localhost:8081" host)) "/get-battle/" "/battle/")
-                                                           (:gameId battle) "?"
-                                                           (encode-params {:start (-> battle :time :start)
-                                                                           :end  (-> battle :time :end)}))}
-                                                  "show score"]
-                                                 [:a.toggle.score {:href ""} "hide score"])))
-                             [:div.livecontainer]
-                             (comment [:a.toggle.users {:href ""} "toggle users"]
-                                      [:ul.users
-                                       (for [user (->> (:users battle) (sort-by :clanTags)
-                                                       (partition-by :clanTags)
-                                                       (mapcat #(sort-by :personaName %)))]
-                                         [:li.user [:span.name (str (when-not (empty? (:clanTags user))
-                                                                      (str "[" (:clanTags user) "]"))
-                                                                    (:personaName user))]
-                                          [:span.expansions (bl/get-expansion-img (:expansions user) true)]])])
+   (javascript-tag (str "$(document).ready(function(){"
+                        "$('a.toggle.users').click(function(){"
+                        "$(this).closest('li').find('ul.users').toggle(); return false});"
+                        "$('a.livescore').click(function(){"
+                        "var onlink = $(this); var offlink = $(this).parent().find('a.toggle.score');"
+                        " $.get($(this).attr('href'), function (response) {"
+                        "$(onlink).closest('li').find('.livecontainer')"
+                        ".replaceWith($('.livecontainer', response));"
+                        "$(onlink).closest('li').find('.livecontainer').toggle('true');"
+                        "$(onlink).toggle('false');$(offlink).toggle('true');"
+                        "});"
+                        "return false;});"
+                        "$('a.toggle.score').click(function(){"
+                        "$(this).toggle(); $(this).parent().find('a.livescore').toggle();"
+                        "$(this).closest('li').find('.livecontainer').toggle('false');"
+                        "return false;});"
+                        "});"))
+   (into [:div#battles]
+         (for [btls (battle-info :weeks (try (Integer/parseInt weeks) (catch Exception ex 0)))]
+           (into [:ul.battles]
+                 (for [battle  btls]
+                   (when (and (or (false? server) (= server (:server battle)))
+                              (or (true? testservers)
+                                  (some #(= % (:server battle)) (vals bf3.bl/server-ids)))
+                              (< 15 (count (:live battle)))
+                              (< 1 (count (:users battle))))
+                     [:li.battle
+                      (into [:div.info]
+                            (concat ( show-battle-info battle)
+                                    (list [:a {:class "livescore" :href
+                                               (str "http://" host
+                                                    (if (or(= "work.dalkvist.se:8081" host)
+                                                           (= "localhost:8081" host)) "/get-battle/" "/battle/")
+                                                    (:gameId battle) "?"
+                                                    (encode-params {:start (-> battle :time :start)
+                                                                    :end  (-> battle :time :end)}))}
+                                           "show score"]
+                                          [:a.toggle.score {:href ""} "hide score"])))
+                      [:div.livecontainer]
+                      (comment [:a.toggle.users {:href ""} "toggle users"]
+                               [:ul.users
+                                (for [user (->> (:users battle) (sort-by :clanTags)
+                                                (partition-by :clanTags)
+                                                (mapcat #(sort-by :personaName %)))]
+                                  [:li.user [:span.name (str (when-not (empty? (:clanTags user))
+                                                               (str "[" (:clanTags user) "]"))
+                                                             (:personaName user))]
+                                   [:span.expansions (bl/get-expansion-img (:expansions user) true)]])])
 
-                             ])))))))
+                      ])))))))
 
 (defn- get-live [server]
   (let [id (str "live" server)
@@ -573,11 +575,10 @@
           (assoc-in resp [:headers "Cache-Control"] "public; max-age=10")
           resp)))))
 
-(server/add-middleware cache-battles)
-
 (defonce server (atom nil))
 
 (defn -main [& m]
+  (server/add-middleware cache-battles)
   (let [port (Integer/parseInt (get (System/getenv) "PORT" "8081"))]
     (System/setProperty "java.net.preferIPv4Stack" "true")
     (reset! server (server/start port))))

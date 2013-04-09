@@ -1,6 +1,7 @@
 (ns bf3.db
   (:use [somnium.congomongo]
-        [somnium.congomongo.config :only [*mongo-config*]]))
+        [somnium.congomongo.config :only [*mongo-config*]])
+  (:require             [clj-time.core :as time]))
 
 (defn- split-mongo-url [url]
   "Parses mongodb url from heroku, eg. mongodb://user:pass@localhost:1234/db"
@@ -67,10 +68,18 @@
                                   {"users" {:$ne []}}
                                   {"gameId" gameid}]})))))
 
-(defn get-battles-by-server [server-id]
-  (do (maybe-init)
+(defn get-battles-by-server [server-id & {:keys [start end weeks] :or {weeks 0}}]
+  (let [t (time/today-at-midnight)
+        start (if (nil? start) (time/minus t (time/weeks weeks)
+                                                    (time/days (- (time/day-of-week t) 1)))
+                  start)
+        end (if (nil? end) (time/plus start (time/weeks 1))
+                end)]
+    (maybe-init)
       (map clean-users
-           (fetch :bl-logs :where (hash-map :$and [ {:server server-id}])))))
+           (fetch :bl-logs :where (hash-map :$and [ {:server server-id}
+                                                    {"time" {:$gte (str start)
+                                                             :$lte (str end)}}])))))
 
 (defn get-log [serverid gameid ]
   (fetch-one :bl-logs :sort {:time -1}

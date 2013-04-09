@@ -8,7 +8,7 @@
   (:use [cheshire.core]
         [net.cgrand.enlive-html]
         [bf3.db]
-        [bf3.info :only [parse-info]])
+        [bf3.live :only [parse-info]])
   (:import [java.net URI DatagramPacket DatagramSocket InetAddress MulticastSocket]))
 
 (declare get-user get-live-info)
@@ -235,13 +235,14 @@
 (defn save-live-users
   ([] (save-live-users (time/now)))
   ([start]
-     (when (> 60 (time/in-secs (time/interval start (time/now))))
-       (doseq [[server id] server-ids]
-         (let [info (get-users id)]
-           (when (not-empty info) (save-bl-user! info))))
-       (when (> 45 (time/in-secs (time/interval start (time/now))))
-         (future (Thread/sleep 10000)
-                 (save-live-users start))))))
+     ;; (when (> 60 (time/in-secs (time/interval start (time/now))))
+     ;;   (doseq [[server id] server-ids]
+     ;;     (let [info (get-users id)]
+     ;;       (when (not-empty info) (save-bl-user! info))))
+     ;;   (when (> 45 (time/in-secs (time/interval start (time/now))))
+     ;;     (future (Thread/sleep 10000)
+     ;;             (save-live-users start))))
+     ))
 
 (defn- get-platoon-info [id]
   (-> (client/get (str "http://battlelog.battlefield.com/bf3/platoon/" id "/listmembers/")
