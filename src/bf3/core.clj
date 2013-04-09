@@ -391,11 +391,11 @@
                                                    "go live"]))
                                       (show-live-info (dissoc battle :live)))))))
 (defn- get-battles [weeks]
-  (let [data (redis/get-data "gc-battles")]
+  (let [data (redis/get-data (str "gc-battles/w" weeks))]
     (when (or (not data) (and (number? (:time data))
                               (> (clj-time.coerce/to-long (clj-time.core/now)) (:time data))))
       (future (redis/set-data
-               "gc-battles"
+               (str "gc-battles/w" weeks)
                {:time (+ *short-cache-time* (clj-time.coerce/to-long (clj-time.core/now)))
                 :data (->> (client/get (str "http://work.dalkvist.se:8081/gc/real-battles/" weeks
                                       "?" (encode-params {:host (get (:headers (req/ring-request)) "host" "")})))
@@ -412,7 +412,7 @@
 
   (html5 (battles weeks)))
 
-(defpage "/gc/real-battles/" {:keys [testservers host server weeks] :or {testservers false
+(defpage "/gc/real-battles/:weeks" {:keys [testservers host server weeks] :or {testservers false
                                                                    server false
                                                                    host ((:headers (req/ring-request)) "host")
                                                                    weeks 0}}
