@@ -235,14 +235,13 @@
 (defn save-live-users
   ([] (save-live-users (time/now)))
   ([start]
-     ;; (when (> 60 (time/in-secs (time/interval start (time/now))))
-     ;;   (doseq [[server id] server-ids]
-     ;;     (let [info (get-users id)]
-     ;;       (when (not-empty info) (save-bl-user! info))))
-     ;;   (when (> 45 (time/in-secs (time/interval start (time/now))))
-     ;;     (future (Thread/sleep 10000)
-     ;;             (save-live-users start))))
-     ))
+     (when (> 60 (time/in-secs (time/interval start (time/now))))
+       (doseq [[server id] server-ids]
+         (let [info (get-users id)]
+           (when (not-empty info) (save-bl-user! info))))
+       (when (> 45 (time/in-secs (time/interval start (time/now))))
+         (future (Thread/sleep 5000)
+                 (save-live-users start))))))
 
 (defn- get-platoon-info [id]
   (-> (client/get (str "http://battlelog.battlefield.com/bf3/platoon/" id "/listmembers/")
@@ -287,7 +286,8 @@
          (.close socket)
          info)
        (catch Exception ex
-         (when (and (not (nil? (re-find #"Address already in use" (.getMessage ex))))
+         (when (and (and(not-empty (.getMessage ex))
+                        (not (nil? (re-find #"Address already in use" (.getMessage ex)))))
                     (< (- dest-port default-dest-port) 50))
            (live-info server-ip server-port game-id (int (+ (rand 25) dest-port)))))))
   ([server-ip server-port game-id dest-port socket]
