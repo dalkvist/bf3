@@ -6,7 +6,7 @@
         hiccup.page-helpers
         [bf3.db :only [get-ts-users get-bl-users get-battle]]
         [bf3.live :only [parse-info]]
-        [bf3.info :only [battle-info merge-infos]]
+        [bf3.info :only[battle-info merge-infos]]
         [cheshire.core :only [encode generate-string]])
   (:require (compojure [route :as route])
             (ring.util [response :as response])
@@ -390,25 +390,29 @@
                                                   [:a {:href (str "http://" host "/live/" (:server battle))}
                                                    "go live"]))
                                       (show-live-info (dissoc battle :live)))))))
-(defn- get-battles []
+(defn- get-battles [weeks]
   (let [data (redis/get-data "gc-battles")]
     (when (or (not data) (and (number? (:time data))
                               (> (clj-time.coerce/to-long (clj-time.core/now)) (:time data))))
       (future (redis/set-data
                "gc-battles"
                {:time (+ *short-cache-time* (clj-time.coerce/to-long (clj-time.core/now)))
-                :data (->> (client/get (str "http://work.dalkvist.se:8081/gc/battles/"
+                :data (->> (client/get (str "http://work.dalkvist.se:8081/gc/real-battles/" weeks
                                       "?" (encode-params {:host (get (:headers (req/ring-request)) "host" "")})))
                      :body)})))
     (:data data)))
 
 (def battles (mem/memo-ttl get-battles *short-cache-time*))
 
-(defpage "/gc/battles" []
+(defpage "/gc/battles" {:keys [weeks] :or {weeks 0}}
 
-  (html5 (battles)))
+  (html5 (battles weeks)))
 
-(defpage "/gc/battles/:weeks" {:keys [testservers host server weeks] :or {testservers false
+(defpage "/gc/battles/:weeks" {:keys [weeks] :or {weeks 0}}
+
+  (html5 (battles weeks)))
+
+(defpage "/gc/real-battles/" {:keys [testservers host server weeks] :or {testservers false
                                                                    server false
                                                                    host ((:headers (req/ring-request)) "host")
                                                                    weeks 0}}
@@ -430,7 +434,8 @@
                         "$(this).closest('li').find('.livecontainer').toggle('false');"
                         "return false;});"
                         "});"))
-   (into [:div#battles]
+   (into [:div#battles  [:p "To help with slow the loading, battles are now partitioned by weeks. "
+                         "Use gc/battles/\"nr of weeks ago\" for previous weeks, gc/battles/1 gives last week etc"]]
          (for [btls (battle-info :weeks (try (Integer/parseInt weeks) (catch Exception ex 0)))]
            (into [:ul.battles]
                  (for [battle  btls]
@@ -580,5 +585,4 @@
 (defn -main [& m]
   (server/add-middleware cache-battles)
   (let [port (Integer/parseInt (get (System/getenv) "PORT" "8081"))]
-    (System/setProperty "java.net.preferIPv4Stack" "true")
     (reset! server (server/start port))))
