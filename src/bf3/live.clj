@@ -62,7 +62,7 @@
      score
     (->> (merge-with merge (->> users (partition-by :team)
                                 (map (fn [t] (hash-map (:team (first t))
-                                                      (->> t (map #(select-keys % [:kills :deaths]))
+                                                      (->> t (map #(select-keys % [:kills :deaths :score]))
                                                            (apply merge-with +)))))
                                 (reduce merge))
                      score)
