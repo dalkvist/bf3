@@ -50,10 +50,13 @@
      (->> logs
           (filter (fn [b] (and (not-empty (:users b)))
                     (some (fn [[team score]] (not= 0 (:max score))) (:stats b))))
-
           (#(partition-by
              (fn [b] (str (:gameId b) (:currentMap b) (:gameMode b) (:mapVariant b)
                          (:vehicles b) (:mapMode b)
+                         (->> b :users (partition-by :team)
+                              (map (fn [team] (->> team (map :clanTags) frequencies
+                                                  (sort-by second) reverse first first)))
+                              (reduce str))
                          (some (fn [[t s]] (apply = (vals (select-keys s [:max :current]))))
                                (:stats b)))) %))
           (filter #(< 15 (count %))))))
