@@ -53,12 +53,10 @@
           (#(partition-by
              (fn [b] (str (:gameId b) (:currentMap b) (:gameMode b) (:mapVariant b)
                          (:vehicles b) (:mapMode b)
-                         (->> b :users (partition-by :team)
-                              (map (fn [team] (->> team (map :clanTags) frequencies
-                                                  (sort-by second) reverse first first)))
-                              (reduce str))
-                         (some (fn [[t s]] (apply = (vals (select-keys s [:max :current]))))
-                               (:stats b)))) %))
+                         (every? (fn [[t s]] (= 0 (:score s)))
+                                 (if (->> b :stats :1 :score)
+                                   (->> b :stats)
+                                   (->> b :live bf3.live/parse-info :stats))))) %))
           (filter #(< 15 (count %))))))
 
 (comment
