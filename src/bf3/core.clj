@@ -442,8 +442,10 @@
                    (when (and (or (false? server) (= server (:server battle)))
                               (or (true? testservers)
                                   (some #(= % (:server battle)) (vals bf3.bl/server-ids)))
-                              (< 15 (count (:live battle)))
-                              (< 1 (count (:users battle))))
+                              (< 15 (count (:users battle)))
+                              (< (* 5 60)
+                                 (time/in-secs (time/interval (clj-time.format/parse (->> battle :time :start))
+                                                              (clj-time.format/parse (->> battle :time :end))))))
                      [:li.battle
                       (into [:div.info]
                             (concat ( show-battle-info battle)
