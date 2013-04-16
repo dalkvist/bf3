@@ -53,6 +53,10 @@
           (#(partition-by
              (fn [b] (str (:gameId b) (:currentMap b) (:gameMode b) (:mapVariant b)
                          (:vehicles b) (:mapMode b)
+                         (->> b :users (partition-by :team)
+                              (map (fn [team] (->> team (map :clanTags) frequencies
+                                                  (sort-by second) reverse first first)))
+                              (reduce str))
                          (every? (fn [[t s]] (= 0 (:score s)))
                                  (if (->> b :stats :1 :score)
                                    (->> b :stats)
