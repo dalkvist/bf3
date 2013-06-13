@@ -588,3 +588,18 @@
   (server/add-middleware cache-battles)
   (let [port (Integer/parseInt (get (System/getenv) "PORT" "8081"))]
     (reset! server (server/start port))))
+
+(defn export-stats
+  (doseq [weeksago (range 3 10)]
+    (spit (str "/tmp/GC-week-" (- 21 weeksago) ".js")
+          (->> (battle-info :weeks weeksago)
+               (map  (fn [l] (->> l
+                                 (filter (fn [battle]
+                                           (and (some (fn [ser] (= ser (:server battle))) (vals bf3.bl/server-ids))
+                                                (< 15 (count (:users battle)))
+                                                (< (* 5 60)
+                                                   (time/in-secs (time/interval (clj-time.format/parse (->> battle :time :start))
+                                                                                (clj-time.format/parse (->> battle :time :end))))))))
+                                 (map (fn [battle] (dissoc battle :live))))))
+               (filter not-empty)
+               cheshire.core/generate-string))))
